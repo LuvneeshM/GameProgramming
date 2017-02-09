@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
 		bool up = true;
 
 		glViewport(0, 0, 640, 360);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		ShaderProgram program(RESOURCE_FOLDER"vertex_textured.glsl", RESOURCE_FOLDER"fragment_textured.glsl");
 		Matrix projectionMatrix;
 		Matrix modelMatrix;

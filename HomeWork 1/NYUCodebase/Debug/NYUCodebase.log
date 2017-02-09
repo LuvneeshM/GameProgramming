@@ -1,14 +1,14 @@
-﻿Build started 2/8/2017 12:53:30 AM.
+﻿Build started 2/9/2017 12:56:16 PM.
      1>Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\HomeWork 1\NYUCodebase\NYUCodebase.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /IC:\SDL2\include /IC:\SDL2_image\include /IC:\glew\include /IC:\SDL2_mixer\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _WINDOWS /D _MBCS /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
          main.cpp
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(65): warning C4305: 'argument' : truncation from 'double' to 'float'
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(121): warning C4305: 'argument' : truncation from 'double' to 'float'
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(143): warning C4305: 'argument' : truncation from 'double' to 'float'
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(165): warning C4305: 'argument' : truncation from 'double' to 'float'
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(214): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(234): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(67): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(123): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(145): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(167): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(216): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\homework 1\nyucodebase\main.cpp(236): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\HomeWork 1\Debug\NYUCodebase.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\SDL2_mixer\lib\x86 /LIBPATH:C:\SDL2\lib\x86 /LIBPATH:C:\SDL2_image\lib\x86 /LIBPATH:C:\glew\lib\Release\Win32 SDL2.lib SDL2_mixer.lib glew32.lib SDL2main.lib SDL2_image.lib OpenGL32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\HomeWork 1\Debug\NYUCodebase.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\HomeWork 1\Debug\NYUCodebase.lib" /MACHINE:X86 Debug\main.obj
          Debug\Matrix.obj
@@ -18,4 +18,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:01.04
+Time Elapsed 00:00:03.62
