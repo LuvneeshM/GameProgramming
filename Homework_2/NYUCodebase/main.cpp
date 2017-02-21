@@ -15,6 +15,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <Windows.h>
+
 using namespace std;
 
 #ifdef _WINDOWS
@@ -85,6 +87,7 @@ class Entity{
 public:
 	float centerX, centerY, width, height;
 	Matrix modelMatrix;
+	float angleTweak = 4.0f;
 	float speedX = 0.0f;
 	float speedY = 0.0f;
 	bool movingY; 
@@ -109,10 +112,17 @@ public:
 
 		modelMatrix.identity();
 		if (movingY){
-			centerY += speedY * elapsed;
+			if (type == "ball") {
+				centerY += speedY*cos(3.14159265 / angleTweak)*0.00006f*1.25f;
+			}
+			centerY += speedY * 0.00006f;
+			
 		}
 		if (movingX){
-			centerX += speedX * elapsed;
+			if (type == "ball") {
+				centerX += speedX * sin(3.14159265 / angleTweak)*0.00006f*1.5f;
+			}
+			centerX += speedX * 0.00006f;
 		}
 		modelMatrix.Translate(centerX, centerY, 0.0f);
 		/*if (type == "wall"){
@@ -141,7 +151,7 @@ public:
 		glDisableVertexAttribArray(program.texCoordAttribute);
 	}
 
-	void collisionCheck(Entity r1){ //current is R2
+	void collisionCheck(Entity r1){ 
 
 		//collide
 		if (!(r1.centerY - r1.height / 2 >= this->centerY + this->height / 2) && //r1 bot > r2 top
@@ -151,7 +161,7 @@ public:
 			){
 
 			//DELETE THIS
-			if (r1.type == "paddle"){
+			/*if (r1.type == "paddle"){
 				ofstream log;
 				log.open("log.txt");
 				log << r1.type << r1.centerX << " " << r1.centerY << " " << r1.width / 2 << " " << r1.height / 2 << endl;
@@ -162,7 +172,7 @@ public:
 				log << endl << r1.centerX + r1.width / 2 << " < " << this->centerX - this->width / 2;
 				log << endl << r1.centerY - r1.height / 2 << " <= " << this->centerY - this->height / 2;
 				log.close();
-			}
+			}*/
 			//hit a wall
 			if (r1.type == "wall"){
 				//I am a ball
@@ -186,12 +196,36 @@ public:
 				if (((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
 					(r1.centerY + r1.height / 2 >= this->centerY + this->height / 2) && (r1.centerY - r1.height / 2 <= this->centerY - this->height / 2)){
 					this->speedX *= -1;
+					r1.entityToString();
+					OutputDebugString("\n");
+					this->entityToString();
+					OutputDebugString("\n");
 				}
 				//hit bot/top
 				else if ((r1.centerY - r1.height / 2 <= this->centerY + this->height / 2) || (r1.centerY + r1.height / 2 >= this->centerY - this->height / 2)){
 					this->speedY *= -1;
 				}
 			}
+
+			//change up the angle for fun
+			int change = rand() % 5;
+			if (change == 0) {
+				angleTweak = 4.0f;
+			}
+			else if (change == 1) {
+				angleTweak = 3.5f;
+			}
+			else if (change == 2) {
+				angleTweak = 3.75f;
+			}
+			else if (change == 3) {
+				angleTweak = 4.25f;
+			}
+			else {
+				angleTweak = 4.5f;
+			}
+
+
 		}
 		//did I win
 		else if (this->type == "ball"){
@@ -206,6 +240,12 @@ public:
 				gameOn = false;
 			}
 		}
+	}//end collision
+
+	void entityToString() {
+		ostringstream ss;
+		ss << this->type << " stats: centerX " << centerX << " centerY " << centerY << " width " << width << " height " << height;
+		OutputDebugString( ss.str().c_str());
 	}
 
 };
@@ -299,30 +339,12 @@ int main(int argc, char *argv[])
 				done = true;
 			} 
 			else if (event.type == SDL_KEYDOWN){
-				//left paddle up
-				if (event.key.keysym.scancode == SDL_SCANCODE_W){
-					leftPaddleE.speedY = 1.0f;
-				}
-				//left paddle down
-				else if (event.key.keysym.scancode == SDL_SCANCODE_S){
-					leftPaddleE.speedY = -1.0f;
-				}
-				//right paddle up
-				if (event.key.keysym.scancode == SDL_SCANCODE_UP){
-					rightPaddleE.speedY = 1.0f;
-					//rightPad.paddleSpeed = 1.0f;
-				}
-				else if (event.key.keysym.scancode == SDL_SCANCODE_DOWN){
-					rightPaddleE.speedY = -1.0f;
-					//rightPad.paddleSpeed = -1.0f;
-				}
-				//start and reset game game
 				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE){
 					if (!gameOn){
 						gameOn = true;
 						setUp(leftPaddleE, rightPaddleE, ballE);
-						ballE.speedX = -1.50f;//rand() % (3 - 1 + 1) + 1;
-						ballE.speedY = -0.50f;//rand() % (3 - 1 + 1) + 1;
+						ballE.speedX = ((rand() % 2 + 1) == 1) ? 1.75f : -1.5f;
+						ballE.speedY = ((rand() % 2 + 1) == 1) ? 1.85f : -1.85f;
 					}
 				}
 			}
@@ -336,6 +358,34 @@ int main(int argc, char *argv[])
 					rightPaddleE.speedY = 0.0f;
 				}
 			}
+		}
+
+		const Uint8 *keys = SDL_GetKeyboardState(NULL);
+		//left paddle
+		if (keys[SDL_SCANCODE_W]) {
+			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
+				leftPaddleE.speedY = 1.75f;
+			else
+				leftPaddleE.speedY = 2.5f;
+		}
+		else if (keys[SDL_SCANCODE_S]) {
+			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
+				leftPaddleE.speedY = -1.75f;
+			else
+				leftPaddleE.speedY = -2.5f;
+		}
+		//right paddle
+		if (keys[SDL_SCANCODE_UP]) {
+			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
+				rightPaddleE.speedY = 1.75f;
+			else
+				rightPaddleE.speedY = 2.5f;
+		}
+		else if (keys[SDL_SCANCODE_DOWN]) {
+			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
+				rightPaddleE.speedY = -1.75f;
+			else
+				rightPaddleE.speedY = -2.5f;
 		}
 
 		float ticks = (float)SDL_GetTicks() / 1000.0f;
@@ -390,11 +440,11 @@ int main(int argc, char *argv[])
 			modelMatrix.Translate(-2.5f, -1.0f, 0.0f);
 			program.setModelMatrix(modelMatrix);
 			if (winner == 1){
-				whoWon = "Left Player Won";
+				whoWon = "Right Player Won";
 				DrawText(&program, font, whoWon, 0.25f, 0);
 			}
 			else if (winner == 2){
-				whoWon = "Right Player Won";
+				whoWon = "Left Player Won";
 				DrawText(&program, font, whoWon, 0.25f, 0);
 			}
 
