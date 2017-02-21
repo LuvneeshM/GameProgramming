@@ -195,10 +195,10 @@ public:
 				}
 				//hit a paddle
 				else if (r1.type == "paddle") {
-					r1.entityToString();
-					OutputDebugString("\n");
-					this->entityToString();
-					OutputDebugString("\n");
+					//r1.entityToString();
+					//OutputDebugString("\n");
+					//this->entityToString();
+					//OutputDebugString("\n");
 					//be specific
 					//left/right
 					//left
@@ -374,8 +374,8 @@ int main(int argc, char *argv[])
 					if (!gameOn){
 						gameOn = true;
 						setUp(leftPaddleE, rightPaddleE, ballE);
-						ballE.speedX = ((rand() % 2 + 1) == 1) ? 1.75f : -1.5f;
-						ballE.speedY = ((rand() % 2 + 1) == 1) ? 1.85f : -1.85f;
+						ballE.speedX = ((rand() % 2 + 1) == 1) ? 1.75f : -1.55f;
+						ballE.speedY = ((rand() % 2 + 1) == 1) ? 1.65f : -1.85f;
 					}
 				}
 			}
@@ -395,26 +395,26 @@ int main(int argc, char *argv[])
 		//left paddle
 		if (keys[SDL_SCANCODE_W]) {
 			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
-				leftPaddleE.speedY = 1.75f;
+				leftPaddleE.speedY = 1.95f;
 			else
 				leftPaddleE.speedY = 2.5f;
 		}
 		else if (keys[SDL_SCANCODE_S]) {
 			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
-				leftPaddleE.speedY = -1.75f;
+				leftPaddleE.speedY = -1.95f;
 			else
 				leftPaddleE.speedY = -2.5f;
 		}
 		//right paddle
 		if (keys[SDL_SCANCODE_UP]) {
 			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
-				rightPaddleE.speedY = 1.75f;
+				rightPaddleE.speedY = 1.95f;
 			else
 				rightPaddleE.speedY = 2.5f;
 		}
 		else if (keys[SDL_SCANCODE_DOWN]) {
 			if (abs(ballE.speedX) < 1.70f || abs(ballE.speedY) < 1.70f)
-				rightPaddleE.speedY = -1.75f;
+				rightPaddleE.speedY = -1.95f;
 			else
 				rightPaddleE.speedY = -2.5f;
 		}
