@@ -115,16 +115,16 @@ public:
 		modelMatrix.identity();
 		if (movingY){
 			if (type == "ball") {
-				centerY += speedY*cos(3.14159265 / angleTweak)*0.00006f*1.25f;
+				centerY += speedY*cos(3.14159265 / angleTweak)*elapsed*1.25f;
 			}
-			centerY += speedY * 0.0006f;
+			centerY += speedY *elapsed;
 			
 		}
 		if (movingX){
 			if (type == "ball") {
-				centerX += speedX * sin(3.14159265 / angleTweak)*0.00006f*1.5f;
+				centerX += speedX * sin(3.14159265 / angleTweak)*elapsed*1.5f;
 			}
-			centerX += speedX * 0.0006f;
+			centerX += speedX * elapsed;
 		}
 		modelMatrix.Translate(centerX, centerY, 0.0f);
 		/*if (type == "wall"){
@@ -201,7 +201,26 @@ public:
 					OutputDebugString("\n");
 					//be specific
 					//left/right
-					if ( ((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
+					//left
+					if (speedX < 0 && r1.centerX + r1.width / 2 >= this->centerX - this->width / 2 && r1.centerX+r1.width/2 <= centerX) {
+						if (r1.centerY + r1.height - 0.005f >= this->centerY + this->height) {
+							this->speedX *= -1;
+						}
+						else if (r1.centerY - r1.height + 0.005f <= this->centerY - this->height) {
+							this->speedX *= -1;
+						}
+					}
+					//right
+					else if (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2 && r1.centerX-r1.width/2 >= this->centerX) {
+						if (r1.centerY + r1.height - 0.005f >= this->centerY + this->height) {
+							this->speedX *= -1;
+						}
+						else if (r1.centerY - r1.height + 0.005f <= this->centerY - this->height) {
+							this->speedX *= -1;
+						}
+					}
+					
+					/*if ( ((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
 						(r1.centerY + r1.height/2 >= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2) 
 						//|| (r1.centerY - r1.height/2 <= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2)
 						){
@@ -209,7 +228,7 @@ public:
 							this->speedX *= -1;
 						//}
 
-					}
+					}*/
 					//hit bot/top
 					if ( ((r1.centerY - r1.height / 2 <= this->centerY + this->height / 2) && (r1.centerY - r1.height /2 >= this->centerY - this->height/2)) || 
 						((r1.centerY + r1.height / 2 >= this->centerY - this->height / 2) && (r1.centerY + r1.height/2 <= this->centerY + this->height/2)) ) {
