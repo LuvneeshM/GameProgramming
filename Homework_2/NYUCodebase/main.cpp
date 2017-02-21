@@ -92,7 +92,9 @@ public:
 	float speedY = 0.0f;
 	bool movingY; 
 	bool movingX;
-	std::string type;
+	string type;
+
+	Entity* hit = NULL;
 	//float vertices[] = { -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
 
 	Entity(){}
@@ -115,14 +117,14 @@ public:
 			if (type == "ball") {
 				centerY += speedY*cos(3.14159265 / angleTweak)*0.00006f*1.25f;
 			}
-			centerY += speedY * 0.00006f;
+			centerY += speedY * 0.0006f;
 			
 		}
 		if (movingX){
 			if (type == "ball") {
 				centerX += speedX * sin(3.14159265 / angleTweak)*0.00006f*1.5f;
 			}
-			centerX += speedX * 0.00006f;
+			centerX += speedX * 0.0006f;
 		}
 		modelMatrix.Translate(centerX, centerY, 0.0f);
 		/*if (type == "wall"){
@@ -151,100 +153,110 @@ public:
 		glDisableVertexAttribArray(program.texCoordAttribute);
 	}
 
-	void collisionCheck(Entity r1){ 
-
-		//collide
-		if (!(r1.centerY - r1.height / 2 >= this->centerY + this->height / 2) && //r1 bot > r2 top
-			!(r1.centerY + r1.height / 2 <= this->centerY - this->height / 2) && //r1 top < r2 bot
-			!(r1.centerX - r1.width / 2 >= this->centerX + this->width / 2) && //r1 left > r2 right
-			!(r1.centerX + r1.width / 2 <= this->centerX - this->width / 2) //r1 right < r2 left
-			){
-
-			//DELETE THIS
-			/*if (r1.type == "paddle"){
-				ofstream log;
-				log.open("log.txt");
-				log << r1.type << r1.centerX << " " << r1.centerY << " " << r1.width / 2 << " " << r1.height / 2 << endl;
-				log << this->type << centerX << " " << centerY << " " << width / 2 << " " << height / 2 << endl;
-				log << endl << r1.centerY - r1.height / 2 << " > " << this->centerY + this->height / 2;
-				log << endl << r1.centerY + r1.height / 2 << " < " << this->centerY - this->height / 2;
-				log << endl << r1.centerX - r1.width / 2 << " > " << this->centerX + this->width / 2;
-				log << endl << r1.centerX + r1.width / 2 << " < " << this->centerX - this->width / 2;
-				log << endl << r1.centerY - r1.height / 2 << " <= " << this->centerY - this->height / 2;
-				log.close();
-			}*/
-			//hit a wall
-			if (r1.type == "wall"){
-				//I am a ball
-				if (this->type == "ball"){
-					this->speedY *= -1;
-				}
-				//I am a paddle....
-				if (this->type == "paddle"){
-					if (this->centerY > 0){
-						this->centerY = 2.0f - r1.height - this->height / 2;
+	void collisionCheck(Entity& r1){ 
+		//did I hit you before (only ball scenario)
+		if (hit == NULL || hit != &r1 || this->type != "ball") {
+			
+			//collide
+			if (!(r1.centerY - r1.height / 2 >= this->centerY + this->height / 2) && //r1 bot > r2 top
+				!(r1.centerY + r1.height / 2 <= this->centerY - this->height / 2) && //r1 top < r2 bot
+				!(r1.centerX - r1.width / 2 >= this->centerX + this->width / 2) && //r1 left > r2 right
+				!(r1.centerX + r1.width / 2 <= this->centerX - this->width / 2) //r1 right < r2 left
+				) {
+				hit = &r1;
+				//DELETE THIS
+				/*if (r1.type == "paddle"){
+					ofstream log;
+					log.open("log.txt");
+					log << r1.type << r1.centerX << " " << r1.centerY << " " << r1.width / 2 << " " << r1.height / 2 << endl;
+					log << this->type << centerX << " " << centerY << " " << width / 2 << " " << height / 2 << endl;
+					log << endl << r1.centerY - r1.height / 2 << " > " << this->centerY + this->height / 2;
+					log << endl << r1.centerY + r1.height / 2 << " < " << this->centerY - this->height / 2;
+					log << endl << r1.centerX - r1.width / 2 << " > " << this->centerX + this->width / 2;
+					log << endl << r1.centerX + r1.width / 2 << " < " << this->centerX - this->width / 2;
+					log << endl << r1.centerY - r1.height / 2 << " <= " << this->centerY - this->height / 2;
+					log.close();
+				}*/
+				//hit a wall
+				if (r1.type == "wall") {
+					//I am a ball
+					if (this->type == "ball") {
+						this->speedY *= -1;
 					}
-					else if (this->centerY <= 0){
-						this->centerY = -1 * 2.0f + r1.height + this->height / 2;
+					//I am a paddle....
+					if (this->type == "paddle") {
+						if (this->centerY > 0) {
+							this->centerY = 2.0f - r1.height - this->height / 2;
+						}
+						else if (this->centerY <= 0) {
+							this->centerY = -1 * 2.0f + r1.height + this->height / 2;
+						}
 					}
 				}
-			}
-			//hit a paddle
-			else if (r1.type == "paddle"){
-				//be specific please
-				//left/right
-				if (((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
-					(r1.centerY + r1.height / 2 >= this->centerY + this->height / 2) && (r1.centerY - r1.height / 2 <= this->centerY - this->height / 2)){
-					this->speedX *= -1;
+				//hit a paddle
+				else if (r1.type == "paddle") {
 					r1.entityToString();
 					OutputDebugString("\n");
 					this->entityToString();
 					OutputDebugString("\n");
+					//be specific
+					//left/right
+					if ( ((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
+						(r1.centerY + r1.height/2 >= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2) 
+						//|| (r1.centerY - r1.height/2 <= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2)
+						){
+						//if ((r1.centerY + r1.height / 2 >= this->centerY + this->height / 2) && (r1.centerY - r1.height / 2 <= this->centerY - this->height / 2)) {
+							this->speedX *= -1;
+						//}
+
+					}
+					//hit bot/top
+					if ( ((r1.centerY - r1.height / 2 <= this->centerY + this->height / 2) && (r1.centerY - r1.height /2 >= this->centerY - this->height/2)) || 
+						((r1.centerY + r1.height / 2 >= this->centerY - this->height / 2) && (r1.centerY + r1.height/2 <= this->centerY + this->height/2)) ) {
+						this->speedY *= -1;
+					}
 				}
-				//hit bot/top
-				else if ((r1.centerY - r1.height / 2 <= this->centerY + this->height / 2) || (r1.centerY + r1.height / 2 >= this->centerY - this->height / 2)){
-					this->speedY *= -1;
+
+				//change up the angle for fun
+ 				int change = rand() % 5;
+				if (change == 0) {
+					angleTweak = 4.0f;
 				}
-			}
-
-			//change up the angle for fun
-			int change = rand() % 5;
-			if (change == 0) {
-				angleTweak = 4.0f;
-			}
-			else if (change == 1) {
-				angleTweak = 3.5f;
-			}
-			else if (change == 2) {
-				angleTweak = 3.75f;
-			}
-			else if (change == 3) {
-				angleTweak = 4.25f;
-			}
-			else {
-				angleTweak = 4.5f;
-			}
+				else if (change == 1) {
+					angleTweak = 3.5f;
+				}
+				else if (change == 2) {
+					angleTweak = 3.75f;
+				}
+				else if (change == 3) {
+					angleTweak = 4.25f;
+				}
+				else {
+					angleTweak = 4.5f;
+				}
 
 
-		}
-		//did I win
-		else if (this->type == "ball"){
-			//right wins 
-			if (this->centerX - this->width/2 <= -3.55f) {
-				winner = 1;
-				gameOn = false;
 			}
-			//left wins
-			else if (this->centerX + this->width/2 >= 3.55f){
-				winner = 2;
-				gameOn = false;
+			//did I win
+			else if (this->type == "ball") {
+				//right wins 
+				if (this->centerX - this->width / 2 <= -3.55f) {
+					winner = 1;
+					gameOn = false;
+				}
+				//left wins
+				else if (this->centerX + this->width / 2 >= 3.55f) {
+					winner = 2;
+					gameOn = false;
+				}
 			}
 		}
 	}//end collision
 
 	void entityToString() {
 		ostringstream ss;
-		ss << this->type << " stats: centerX " << centerX << " centerY " << centerY << " width " << width << " height " << height;
+		ss << this->type << " stats: centerX " << centerX << " centerY " << centerY << " width " << width << " height " << height
+			<< " speedX " << speedX << " speedY" << speedY;
 		OutputDebugString( ss.str().c_str());
 	}
 
@@ -404,13 +416,6 @@ int main(int argc, char *argv[])
 		botWallE.draw(program, wallSprite);
 
 		if (gameOn){
-			//updates
-			//paddles
-			leftPaddleE.update(elapsed/*, allEntity*/);
-			rightPaddleE.update(elapsed/*, allEntity*/);
-			//ball
-			ballE.update(elapsed/*, allEntity*/);
-
 			//udpate p1
 			//ball collision
 			ballE.collisionCheck(topWallE);
@@ -423,7 +428,14 @@ int main(int argc, char *argv[])
 			leftPaddleE.collisionCheck(botWallE);
 			rightPaddleE.collisionCheck(topWallE);
 			rightPaddleE.collisionCheck(botWallE);
+			//updates
+			//paddles
+			leftPaddleE.update(elapsed/*, allEntity*/);
+			rightPaddleE.update(elapsed/*, allEntity*/);
+			//ball
+			ballE.update(elapsed/*, allEntity*/);
 		}
+		//
 		//draw
 		leftPaddleE.draw(program, leftPaddle);
 		rightPaddleE.draw(program, rightPaddle);
