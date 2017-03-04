@@ -137,7 +137,7 @@ void SheetSprite::Draw(ShaderProgram *program) {
 
 bool moveDownOnce = false;
 float enemyDIr = 1.0f;
-#define MAX_ENEMY 6
+#define MAX_ENEMY 18
 float enemyCount = MAX_ENEMY;
 bool win = false;
 
@@ -240,16 +240,27 @@ void setUp(Entity& player, Entity bullets[], vector<Entity>& enemies, const GLui
 	//Entity bullet(player.x, player.y + player.height/1024.0f, 9.0f, 54.0f, "bullet", 1.0f, 1.85f, false); //laserBlue01
 	//bullet.sprite = SheetSprite(sheet, 856 / 1024.0f, 421 / 1024.0f, 9 / 1024.0f, 54 / 1024.0f, 0.5);
 
-	float enemyX = 1.0f;
+	float enemyX = 1.9f;
 	float enemyY = 1.5f;
-	for (int i = 0; i < MAX_ENEMY; i++) {
+	for (int i = 0; i < MAX_ENEMY/2; i++) { //first row
 		float size = 0.5f;
 		float aspect = 93.0f / 84.0f;
-		Entity em = Entity(enemyX, enemyY, 0.5*size*aspect * 2, 0.5*size * 2, "enemy", 1.0f, 0.5f, true);
-		em.sprite = SheetSprite(sheet, 423 / 1024.0f, 728 / 1024.0f, 93 / 1024.0f, 84 / 1024.0f, 0.5); //enemyBlue1
+		Entity em = Entity(enemyX, enemyY, 0.5*size*aspect * 2, 0.5*size * 2, "enemy", .75f, 0.25f, true);
+		em.sprite = SheetSprite(sheet, 423 / 1024.0f, 728 / 1024.0f, 93 / 1024.0f, 84 / 1024.0f, 0.35f); //enemyBlue1
 		enemies.push_back(em);
 		//move over the enemyX pos for each
-		enemyX -= 0.8f;
+		enemyX -= 0.6f;
+	}
+	enemyX = 1.9f;
+	enemyY = 1.0f;
+	for (int i = 0; i < MAX_ENEMY / 2; i++) { //2nd row
+		float size = 0.5f;
+		float aspect = 93.0f / 84.0f;
+		Entity em = Entity(enemyX, enemyY, 0.5*size*aspect * 2, 0.5*size * 2, "enemy", .75f, 0.25f, true);
+		em.sprite = SheetSprite(sheet, 423 / 1024.0f, 728 / 1024.0f, 93 / 1024.0f, 84 / 1024.0f, 0.35); //enemyBlue1
+		enemies.push_back(em);
+		//move over the enemyX pos for each
+		enemyX -= 0.6f;
 	}
 }
 
@@ -264,7 +275,7 @@ int main(int argc, char *argv[])
 	#endif
 		
 		GLuint font = LoadTexture("font1.png");
-
+		GLuint line = LoadTexture("WallSprite.png");
 		GLuint sheet = LoadTexture("sheet.png");
 		Entity player;
 		Entity bullets[3];
@@ -334,13 +345,13 @@ int main(int argc, char *argv[])
 				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE /*&& state==GAME_STATE*/) {
 					if (state == GAME_STATE) {
 						float bulletElapsed = ticks - bulletTime;
-						if (bullets[bulletIndex].alive == false && bulletElapsed > 0.5f) {
+						if (bullets[bulletIndex].alive == false && bulletElapsed > 0.15f) {
 							bulletTime = ticks;
 							bullets[bulletIndex].x = player.x;
 							bullets[bulletIndex].y = player.y + player.height / 2 + bullets[bulletIndex].height / 2;
 							bullets[bulletIndex].alive = true;
 							//bullets[bulletIndex].entityToString();
-							bulletIndex = (bulletIndex + 1) % 3;
+							//bulletIndex = (bulletIndex + 1) % 2 ;
 						}
 					}
 					else if (state == TITLE_SCREEN) {
@@ -362,6 +373,8 @@ int main(int argc, char *argv[])
 
 		glClear(GL_COLOR_BUFFER_BIT);
 		const Uint8 *keys = SDL_GetKeyboardState(NULL);
+		float vertices[] = { -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };
+		float textCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
 
 		switch (state) {
 			case TITLE_SCREEN:
@@ -384,10 +397,6 @@ int main(int argc, char *argv[])
 				modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				DrawText(&program, font, "Space to shoot", 0.25f, 0);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.75f, 0.20f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Max 3 Bullets on screen", 0.25f, 0);
 				//Play Game
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
@@ -422,45 +431,67 @@ int main(int argc, char *argv[])
 					e.update(elapsed);
 					//x-axis penetrations
 					if (e.x + e.width / 2 > 3.55) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-						OutputDebugString("E");
 						float penetration = fabs(fabs(e.x-3.55) - e.width / 2 - 0.05f);
-						e.x = e.x - penetration - 0.003f;
-						e.xVel *= -1;
-						e.y -= e.yVel;
+						for (Entity& ee : enemies) {
+								ee.x = ee.x - penetration - 0.003f;
+								ee.y -= e.yVel;
+								//make the game harder
+								if (enemyCount < 3) {
+									ee.xVel = 1.35f;
+								}
+								else if (enemyCount < 5) {
+									ee.xVel = 1.25f;
+								}
+								else if (enemyCount < 7) {
+									ee.xVel = 1.05f;
+								}
+								else if (enemyCount < 9) {
+									ee.xVel = 0.95f;
+								}
+								else if (enemyCount < 11) {
+									ee.xVel = 0.85f;
+								}
+								ee.xVel *= -1;	
+						}
 					}
 					else if (e.x - e.width / 2 < -3.55) {
-						e.xVel *= -1;
-						e.y -= e.yVel;
+						float penetration = fabs(fabs(e.x + 3.55) - e.width / 2 - 0.05f);
+						for (Entity& ee : enemies) {
+							ee.x = ee.x + penetration + 0.003f;
+							ee.y -= e.yVel;
+							//make the game harder
+							if (enemyCount < 2) {
+								ee.xVel = -1.35f;
+							}
+							else if (enemyCount < 3) {
+								ee.xVel = -1.25f;
+							}
+							else if (enemyCount < 4) {
+								ee.xVel = -1.05f;
+							}
+							else if (enemyCount < 5) {
+								ee.xVel = -0.95f;
+							}
+							else if (enemyCount < 6) {
+								ee.xVel = -0.85f;
+							}
+							ee.xVel *= -1;
+						}
 					}
 					if (e.alive) {
 						//collision checks
 						//enemy player
 						e.checkCollision(player);
+						//enemy bullet
 						for (Entity& b : bullets) {
 							if (b.alive) {
 								e.checkCollision(b);
 							}
+						}
+						//enemy below lose line
+						if (e.y - e.height/2 < -1.4f) {
+							win = false; 
+							state = GAME_OVER;
 						}
 					}
 				}
@@ -472,6 +503,20 @@ int main(int argc, char *argv[])
 				for (Entity& e : enemies) {
 					e.draw(&program);
 				}
+				
+				//boundary line
+				glBindTexture(GL_TEXTURE_2D, line);
+				glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+				glEnableVertexAttribArray(program.positionAttribute);
+				//show all of image
+				glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, textCoords);
+				glEnableVertexAttribArray(program.texCoordAttribute);
+				modelMatrix.identity();
+				modelMatrix.Translate(0, -1.2, 0);
+				modelMatrix.Scale(3.55, 0.01, 0);
+				program.setModelMatrix(modelMatrix);
+				glDrawArrays(GL_TRIANGLES, 0, 6);
+
 				//check win lose condtions
 				if (enemyCount == 0) {
 					win = true;
@@ -500,8 +545,6 @@ int main(int argc, char *argv[])
 				program.setModelMatrix(modelMatrix);
 				DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
 		}
-
-		
 
 		program.setProjectionMatrix(projectionMatrix);
 		program.setViewMatrix(viewMatrix);
