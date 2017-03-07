@@ -1,5 +1,6 @@
 //Luvneesh Mugrai
 //Intro to Game Programming
+//Space Inavders
 
 #ifdef _WINDOWS
 	#include <GL/glew.h>
@@ -224,6 +225,8 @@ public:
 	}
 }; //end entity
 
+//set up for the game
+//used at start and when player restarts
 void setUp(Entity& player, Entity bullets[], vector<Entity>& enemies, const GLuint& sheet) {
 	float playerSize = 0.5f;
 	float playerAspect = 99.0f / 75.0f;
@@ -237,8 +240,6 @@ void setUp(Entity& player, Entity bullets[], vector<Entity>& enemies, const GLui
 		bullets[i].sprite = SheetSprite(sheet, 856 / 1024.0f, 421 / 1024.0f, 9 / 1024.0f, 54 / 1024.0f, size);
 	}
 
-	//Entity bullet(player.x, player.y + player.height/1024.0f, 9.0f, 54.0f, "bullet", 1.0f, 1.85f, false); //laserBlue01
-	//bullet.sprite = SheetSprite(sheet, 856 / 1024.0f, 421 / 1024.0f, 9 / 1024.0f, 54 / 1024.0f, 0.5);
 
 	float enemyX = 1.9f;
 	float enemyY = 1.5f;
@@ -267,7 +268,7 @@ void setUp(Entity& player, Entity bullets[], vector<Entity>& enemies, const GLui
 int main(int argc, char *argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
-	displayWindow = SDL_CreateWindow("My Game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 360, SDL_WINDOW_OPENGL);
+	displayWindow = SDL_CreateWindow("Invaders of Space", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 360, SDL_WINDOW_OPENGL);
 	SDL_GLContext context = SDL_GL_CreateContext(displayWindow);
 	SDL_GL_MakeCurrent(displayWindow, context);
 	#ifdef _WINDOWS
@@ -282,36 +283,6 @@ int main(int argc, char *argv[])
 		vector<Entity> enemies;
 		int bulletIndex = 0;
 		setUp(player, bullets, enemies, sheet);
-		//float playerSize = 0.5f;
-		//float playerAspect = 99.0f / 75.0f;
-		//Entity player(0.0f,-1.6f, 0.5*playerSize*playerAspect* 2, 0.5*playerSize* 2, "player", 1.85f, 1.85f, true);
-		//player.sprite = SheetSprite(sheet, 224.0/1024.0f, 832.0/1024.0f, 99.0f / 1024.0f, 75.0f / 1024.0f, 0.5f);
-
-		//Entity bullets[3];
-		//int bulletIndex = 0;
-
-		//for (int i = 0; i < 3; i++) {
-		//	float size = 0.25f;
-		//	float aspect = 9.0f / 54.0f;
-		//	bullets[i] = Entity(player.x, player.y, 0.5*size*aspect*2, 0.5*size*2, "bullet", 1.0f, 1.85f, false); //laserBlue01
-		//	bullets[i].sprite = SheetSprite(sheet, 856 / 1024.0f, 421 / 1024.0f, 9 / 1024.0f, 54 / 1024.0f, size);
-		//}
-
-		////Entity bullet(player.x, player.y + player.height/1024.0f, 9.0f, 54.0f, "bullet", 1.0f, 1.85f, false); //laserBlue01
-		////bullet.sprite = SheetSprite(sheet, 856 / 1024.0f, 421 / 1024.0f, 9 / 1024.0f, 54 / 1024.0f, 0.5);
-
-		//vector<Entity> enemies; 
-		//float enemyX = 1.0f;
-		//float enemyY = 1.5f;
-		//for (int i = 0; i < MAX_ENEMY; i++) {
-		//	float size = 0.5f;
-		//	float aspect = 93.0f / 84.0f;
-		//	Entity em = Entity(enemyX, enemyY, 0.5*size*aspect * 2, 0.5*size * 2, "enemy", 1.0f, 0.5f, true);
-		//	em.sprite = SheetSprite(sheet, 423/1024.0f, 728 / 1024.0f, 93 / 1024.0f, 84 / 1024.0f,0.5); //enemyBlue1
-		//	enemies.push_back(em);
-		//	//move over the enemyX pos for each
-		//	enemyX -= 0.8f;
-		//}
 
 		enum GameState {TITLE_SCREEN, GAME_STATE, GAME_OVER};
 		GameState state = TITLE_SCREEN;
@@ -342,7 +313,10 @@ int main(int argc, char *argv[])
 				done = true;
 			}
 			else if (event.type == SDL_KEYDOWN) {
-				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE /*&& state==GAME_STATE*/) {
+				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE) {
+					//player shoots
+					//orginally was going to be three bullets
+					//changed to so player only uses 1 bullet
 					if (state == GAME_STATE) {
 						float bulletElapsed = ticks - bulletTime;
 						if (bullets[bulletIndex].alive == false && bulletElapsed > 0.15f) {
@@ -354,10 +328,12 @@ int main(int argc, char *argv[])
 							//bulletIndex = (bulletIndex + 1) % 2 ;
 						}
 					}
+					//player starts game
 					else if (state == TITLE_SCREEN) {
 						state = GAME_STATE;						
 					}
 				}
+				//restart 
 				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == GAME_OVER) {
 					state = TITLE_SCREEN;
 					//reset everything
@@ -378,7 +354,6 @@ int main(int argc, char *argv[])
 
 		switch (state) {
 			case TITLE_SCREEN:
-				//code
 				//Title
 				modelMatrix.identity();
 				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
@@ -397,7 +372,7 @@ int main(int argc, char *argv[])
 				modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				DrawText(&program, font, "Space to shoot", 0.25f, 0);
-				//Play Game
+				//Game On
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
 				program.setModelMatrix(modelMatrix);
@@ -421,13 +396,6 @@ int main(int argc, char *argv[])
 					b.update(elapsed);
 				}
 				for (Entity& e : enemies) {
-					//translate down
-					/*for (Entity& ee : enemies) {
-					if (moveDownOnce) {
-					OutputDebugString("SFAFSAF\n");
-					ee.y -= 0.05;
-					}
-					}*/
 					e.update(elapsed);
 					//x-axis penetrations
 					if (e.x + e.width / 2 > 3.55) {
@@ -533,6 +501,7 @@ int main(int argc, char *argv[])
 				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				string toWrite = "";
+				//Did the player win, did the player lose
 				if (win) {
 					toWrite = "YOU WIN";
 				}
