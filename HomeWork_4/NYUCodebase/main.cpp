@@ -123,7 +123,7 @@ public:
 };
 
 
-enum EntityType {Player, Enemy, Point};
+enum EntityType {Player, Enemy, GoalPost};
 GLuint sheet;
 
 float lerp(float v0, float v1, float t) {
@@ -148,7 +148,7 @@ public:
 			acceleration_x = 1.0f;
 		}
 		else if (typeP == "Point") {
-			typeE = Point;
+			typeE = GoalPost;
 			friction_x = 0;
 			friction_y = 0;
 		}
@@ -173,9 +173,12 @@ public:
 			velocity_x += acceleration_x * elapsed; 
 		velocity_y += acceleration_y * elapsed;
 
-		x += velocity_x * elapsed;
 		y += velocity_y * elapsed;
-
+		//check collision y
+		colldeWithTileY();
+		x += velocity_x * elapsed;
+		//check collision x
+		collideWithTileX();
 	}
 
 	void Render(ShaderProgram *program) {
@@ -225,21 +228,56 @@ public:
 		}
 	}
 
-	
-
 	void colldeWithEntity(Entity *entity) {
 		if (entity->typeE == Enemy) {
 			life = collision(entity) ? false : true;
 			state = life ? state : GAME_OVER;
 		}
-		if (entity->typeE == Point) {
+		if (entity->typeE == GoalPost) {
 			win = collision(entity) ? true : false;
 			state = win ? GAME_OVER : state;
 		}
 	}
-	void colldeWithTile() {
+
+	void collideWithTileX() {
+		int tileX = 0;
+		int tileY = 0;
+
+		//right
+		worldToTileCoordinates(x + width / 2, y, &tileX, &tileY);
+		if (solidTile(levelData[tileY][tileX])) {
+			collidedRight = true;
+			velocity_x = 0;
+			if (typeE == Enemy) {
+				acceleration_x *= -1.0f;
+			}
+			pen_x = (TILE_SIZE*tileX) - (x + width / 2);
+			x += (pen_x - 0.005f);
+		}
+		else {
+			collidedRight = false;
+			pen_x = 0;
+		}
+		//left
+		worldToTileCoordinates(x - width / 2.0f, y, &tileX, &tileY);
+		if (solidTile(levelData[tileY][tileX])) {
+			collidedLeft = false;
+			velocity_x = 0.0f;
+			if (typeE == Enemy) {
+				acceleration_x *= -1.0f;
+			}
+			pen_x = (x - width / 2.0f) - (TILE_SIZE*tileX + TILE_SIZE);
+			x -= (pen_x - 0.005f);
+		}
+		else {
+			collidedLeft = false;
+			pen_x = 0;
+		}
+	}
+
+	void colldeWithTileY() {
 		//entity and tiles
-		int tileX = 0; 
+		int tileX = 0;
 		int tileY = 0;
 
 		//bot
@@ -268,36 +306,7 @@ public:
 			collidedTop = false;
 			pen_y = 0;
 		}
-		//right
-		worldToTileCoordinates(x + width / 2, y, &tileX, &tileY);
-		if (solidTile(levelData[tileY][tileX])) {
-			collidedRight = true;
-			velocity_x = 0;
-			if (typeE == Enemy) {
-				acceleration_x *= -1.0f;
-			}
-			pen_x = (TILE_SIZE*tileX) - (x + width / 2); 
-			x -= (pen_x + 0.005f);
-		}
-		else {
-			collidedRight = false;
-			pen_x = 0;
-		}
-		//left
-		worldToTileCoordinates(x - width / 2, y, &tileX, &tileY);
-		if (solidTile(levelData[tileY][tileX])) {
-			collidedLeft = false;
-			velocity_x = 0; 
-			if (typeE == Enemy) {
-				acceleration_x *= -1.0f;
-			}
-			pen_x = (x - width / 2) - (TILE_SIZE*tileX + TILE_SIZE);
-			x += (pen_x + 0.005f);
-		}
-		else {
-			collidedLeft = false;
-			pen_x = 0;
-		}
+		
 	}
 
 	void entityToString() {
@@ -321,7 +330,7 @@ public:
 	SheetSprite sprite;
 	Matrix ModelMatrix;
 
-	float acceleration_x = 0; 
+	float acceleration_x = 0;
 	float acceleration_y = 0.0f;
 	float velocity_x = 0;
 	float velocity_y = 0;
@@ -379,11 +388,13 @@ private:
 Entity player;
 Entity enemy[3];
 int enemyNum = 0;
-Entity point;
+Entity goalPost;
 
+//player is center of view matrix, mostly
 void centerPlayer() {
 	viewMatrix.identity();
 	viewMatrix.Scale(2.0f, 2.0f, 1.0f);
+	//lower portion, if on player we see below the bottom of the lower level
 	if (player.y <= -5.5f) {
 		viewMatrix.Translate(-player.x, 5.5f, 0.0f);
 	}
@@ -400,7 +411,7 @@ void placeEntity(const string& type, float x, float y) {
 		enemy[enemyNum++] = Entity(x, y, 136, type);
 	}
 	else if (type == "Point") {
-		point = Entity(x, y, 146, type);
+		goalPost = Entity(x, y, 146, type);
 	}
 }
 
@@ -557,15 +568,15 @@ void update(float elapsed) {
 	//collision will be off player
 	//one hit ko only
 	player.Update(elapsed);
-	player.colldeWithTile();
+	
 	for (int i = 0; i < 3; i++) {
 		enemy[i].Update(elapsed);
 		player.colldeWithEntity(&enemy[i]);
-		enemy[i].colldeWithTile();
+		//enemy[i].colldeWithTile();
 	}
-	player.colldeWithEntity(&point);
-	point.Update(elapsed);
-	point.colldeWithTile();
+	player.colldeWithEntity(&goalPost);
+	goalPost.Update(elapsed);
+	//goalPost.colldeWithTile();
 }
 
 void render() {
@@ -575,7 +586,7 @@ void render() {
 	for (int i = 0; i < 3; i++) {
 		enemy[i].Render(program);
 	}
-	point.Render(program);
+	goalPost.Render(program);
 }
 
 void init() {
@@ -685,11 +696,11 @@ int main(int argc, char *argv[])
 			modelMatrix.identity();
 			modelMatrix.Translate(-2.75f, 0.75f, 0.0f);
 			program->setModelMatrix(modelMatrix);
-			DrawText(program, font, "Arrow keys to move", 0.25f, 0);
+			DrawText(program, font, "Arrow keys or wasd to move", 0.23f, 0);
 			modelMatrix.identity();
 			modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
 			program->setModelMatrix(modelMatrix);
-			DrawText(program, font, "Reach the end", 0.25f, 0);
+			DrawText(program, font, "Reach the end", 0.23f, 0);
 			//Game On
 			modelMatrix.identity();
 			modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
