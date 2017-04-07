@@ -49,11 +49,11 @@ public:
 	Vector(float xp, float yp, float zp) : x(xp), y(yp), z(zp) {}
 
 	float length() const{
-		return lengthVar;
+		return sqrt(x*x + y*y + z*z);
 	}
 
 	void normalize() {
-		lengthVar = sqrt(x*x + y*y);
+		lengthVar = sqrt(x*x + y*y + z*z);
 		x /= lengthVar;
 		y /= lengthVar;
 	}
@@ -219,95 +219,46 @@ public:
 		projectedAxisPoints = vectPoints;
 	}
 
-	void Update(float elapsed, Entity& c1, Entity&c2) {
-		rotation += 1.0f * elapsed;
-		position.x += accel * elapsed;
+	void Update(float elapsed) {
+		if (dynamic) {
+			rotation += 1.0f * elapsed;
+			position.x += accel * elapsed;
+			position.y -= accely * elapsed;
 
-		if (position.x < -3.5) { position.x = 3.5; }
-		else if (position.x > 3.5f) { position.x = -3.5f; }
-		if (position.y < -3.0f) { position.y = 3.54f; }
-		else if (position.y > 3.0f) { position.y = -3.54f; }
-
+			if (position.x < -3.25) { position.x = 3.1; }
+			else if (position.x > 3.25f) { position.x = -3.1f; }
+			if (position.y < -2.0f) { position.y = 1.9f; }
+			else if (position.y > 2.0f) { position.y = -1.9f; }
+		}
 		ModelMatrix.identity();
 		ModelMatrix.Translate(position.x, position.y, 0.0f);
 		ModelMatrix.Rotate(rotation);
 		ModelMatrix.Scale(scale.x, scale.y, 1.0f);
 
-
-		//for (int i = 0; i < projectedAxisPoints.size(); i++) {
-		//	
-		//	
-		//	projectedAxisPoints[i] = vectPoints[i] * ModelMatrix;
-		//	
-		//	////scale * rotate * translate
-		//	//// sx 0 
-		//	//// 0 sy 
-		//	//float eXPos = sx;
-		//	//float eYPos = sy;
-		//	//// cos -sin 
-		//	//// sin cos
-		//	// eXPos *= cos(rotation) * vectPoints[i].x - sin(rotation) * vectPoints[i].y;
-		//	// eYPos *= sin(rotation) * vectPoints[i].x + cos(rotation) * vectPoints[i].y;
-		//	////1 0 tx
-		//	////0 1 ty
-		//	//eXPos += x;
-		//	//eYPos += y;
-		//	////save it
-		//	//projectedAxisPoints[i].x = eXPos;
-		//	//projectedAxisPoints[i].y = eYPos;
-		//}
-		////collisions
-		//collision(c1);
-		//collision(c2);
 	}
 
 	void collision(Entity& e) {
 		for (int i = 0; i < projectedAxisPoints.size(); i++) {
-
 			projectedAxisPoints[i] = vectPoints[i] * ModelMatrix;
 			e.projectedAxisPoints[i] = e.vectPoints[i] * e.ModelMatrix;
-			////scale * rotate * translate
-			//// sx 0 
-			//// 0 sy 
-			//float eXPos = sx;
-			//float eYPos = sy;
-			//// cos -sin 
-			//// sin cos
-			// eXPos *= cos(rotation) * vectPoints[i].x - sin(rotation) * vectPoints[i].y;
-			// eYPos *= sin(rotation) * vectPoints[i].x + cos(rotation) * vectPoints[i].y;
-			////1 0 tx
-			////0 1 ty
-			//eXPos += x;
-			//eYPos += y;
-			////save it
-			//projectedAxisPoints[i].x = eXPos;
-			//projectedAxisPoints[i].y = eYPos;
 		}
 		if (checkSATCollision(this->projectedAxisPoints, e.projectedAxisPoints, penetration)) {
-			this->position.x += (penetration.x / 2.0);
-			this->position.y += (penetration.y / 2.0);
-				
-			e.position.x -= (penetration.x / 2.0);
-			e.position.y -= (penetration.y / 2.0);
-				
-			this->accel *= -1.0f;
-			e.accel *= -1.0f;
+			if (this->dynamic) {
+				this->position.x += (penetration.x / 2.0);
+				this->position.y += (penetration.y / 2.0);
+				this->accel *= -1.0f;
+			}
+			if (e.dynamic) {
+				e.position.x += (penetration.x / 2.0);
+				e.position.y += (penetration.y / 2.0);
+				e.accel *= -1.0f;
+			}
 			
-			//for debug
-			//if (talk) {
-				entityToString();
-				e.entityToString();
-			//}
 		}
 		
 	}
 
 	void Render() {
-		/*ModelMatrix.identity();
-		ModelMatrix.Translate(position.x, position.y, 0.0f);
-		ModelMatrix.Rotate(rotation);
-		ModelMatrix.Scale(scale.x, scale.y, 1.0f);
-*/
 		program->setModelMatrix(ModelMatrix);
 
 		float vertices[] = { vectPoints[0].x, vectPoints[0].y, vectPoints[1].x, vectPoints[1].y,
@@ -329,8 +280,10 @@ public:
 	Vector scale;
 	Vector position; 
 
+	bool dynamic = true;
 
-	float accel = .50f;
+	float accel = 0.85f;
+	float accely = 0.05f;
 	float rotation;
 	Matrix ModelMatrix;
 
@@ -350,19 +303,33 @@ void collision(Entity& sSq, Entity& mSq, Entity& bSq) {
 	sSq.collision(mSq);
 	sSq.collision(bSq);
 	mSq.collision(bSq);
+
 }
 
-void update(float elapsed, Entity& sSq, Entity& mSq, Entity& bSq) {
-	sSq.Update(elapsed, mSq, bSq);
-	mSq.Update(elapsed, sSq, bSq);
-	bSq.Update(elapsed, sSq, mSq);
+void update(float elapsed, Entity& sSq, Entity& mSq, Entity& bSq, Entity& lw, Entity& rw, Entity& tw, Entity& bw) {
+	sSq.Update(elapsed);
+	mSq.Update(elapsed);
+	bSq.Update(elapsed);
+
 	collision(sSq, mSq, bSq);
+
+	//aestetically pleasing border,nothing else 
+	/*lw.Update(elapsed);
+	rw.Update(elapsed);
+	tw.Update(elapsed);
+	bw.Update(elapsed);*/
+	
+
 }
 
-void render(Entity& sSq, Entity& mSq, Entity& bSq) {
+void render(Entity& sSq, Entity& mSq, Entity& bSq, Entity& lw, Entity& rw, Entity& tw, Entity& bw) {
 	sSq.Render();
 	mSq.Render();
 	bSq.Render();
+	/*lw.Render();
+	rw.Render();
+	tw.Render();
+	bw.Render();*/
 }
 
 void init(Entity& sSq, Entity& mSq, Entity& bSq) {
@@ -372,12 +339,14 @@ void init(Entity& sSq, Entity& mSq, Entity& bSq) {
 	sSq.name = "small";
 	
 	mSq.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
-	mSq.accel *= -1.0;
+	mSq.accel *= -1.0f;
+	mSq.accely = 0.0f;
 	mSq.position.x = 0.0f;
 	mSq.position.y = 0.0f;
 	mSq.name = "med";
 
 	bSq.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
+	bSq.accely *= -5.0f;
 	bSq.position.x = 2.0f;
 	bSq.position.y = 0.25f;
 	bSq.name = "big";
@@ -408,6 +377,28 @@ int main(int argc, char *argv[])
 	Entity bSq(3.0f, 3.0f, 30 * 3.14159 / 180);
 	init(sSq, mSq, bSq);
 
+	Entity lw(1.0f, 20.0f, 0.0);
+	lw.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
+	lw.position.x = -3.5f;
+	lw.position.y = 0.0f;
+	lw.dynamic = false;
+	Entity rw(1.0f, 20.0f, 0.0);
+	rw.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
+	rw.position.x = 3.5f;
+	rw.position.y = 0.0f;
+	rw.dynamic = false;
+	Entity tw(40.0f, 1.0f, 0.0);
+	tw.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
+	tw.position.x = 0.0f;
+	tw.position.y = 2.0f;
+	tw.dynamic = false;
+	Entity bw(40.0f, 1.0f, 0.0);
+	bw.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
+	bw.position.x = 0.0f;
+	bw.position.y = -2.0f;
+	bw.dynamic = false;
+
+
 	float lastTick = 0.0f;
 
 	SDL_Event event;
@@ -435,19 +426,19 @@ int main(int argc, char *argv[])
 		program->setProjectionMatrix(projectionMatrix);
 		program->setViewMatrix(viewMatrix);
 
-		if (state == GAME_STATE) {
+		//if (state == GAME_STATE) {
 			//fixed updating
 			if (fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
 				fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
 			}
 			while (fixedElapsed >= FIXED_TIMESTEP) {
 				fixedElapsed -= FIXED_TIMESTEP;
-				update(FIXED_TIMESTEP, sSq, mSq, bSq);
+				update(FIXED_TIMESTEP, sSq, mSq, bSq,lw,rw,tw,bw);
 			}
 			//update player
-			update(fixedElapsed, sSq, mSq, bSq);
-			render(sSq, mSq, bSq);
-		}
+			update(fixedElapsed, sSq, mSq, bSq,lw,rw,tw,bw);
+			render(sSq, mSq, bSq,lw,rw,tw,bw);
+		//}
 		SDL_GL_SwapWindow(displayWindow);
 	}
 
