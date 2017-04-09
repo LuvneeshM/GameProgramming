@@ -225,10 +225,11 @@ public:
 			position.x += accel * elapsed;
 			position.y -= accely * elapsed;
 
-			if (position.x < -3.25) { position.x = 3.1; }
-			else if (position.x > 3.25f) { position.x = -3.1f; }
+			/*if (position.x < -3.55) { position.x = 3.1; }
+			else if (position.x > 3.55f) { 
+				position.x = -3.1f; }
 			if (position.y < -2.0f) { position.y = 1.9f; }
-			else if (position.y > 2.0f) { position.y = -1.9f; }
+			else if (position.y > 2.0f) { position.y = -1.9f; }*/
 		}
 		ModelMatrix.identity();
 		ModelMatrix.Translate(position.x, position.y, 0.0f);
@@ -243,14 +244,14 @@ public:
 			e.projectedAxisPoints[i] = e.vectPoints[i] * e.ModelMatrix;
 		}
 		if (checkSATCollision(this->projectedAxisPoints, e.projectedAxisPoints, penetration)) {
-			if (this->dynamic) {
+			if (dynamic) {
 				this->position.x += (penetration.x / 2.0);
 				this->position.y += (penetration.y / 2.0);
 				this->accel *= -1.0f;
 			}
 			if (e.dynamic) {
-				e.position.x += (penetration.x / 2.0);
-				e.position.y += (penetration.y / 2.0);
+				e.position.x -= (penetration.x / 2.0);
+				e.position.y -= (penetration.y / 2.0);
 				e.accel *= -1.0f;
 			}
 			
@@ -282,8 +283,8 @@ public:
 
 	bool dynamic = true;
 
-	float accel = 0.85f;
-	float accely = 0.05f;
+	float accel = 0.65f;
+	float accely = 0.0;
 	float rotation;
 	Matrix ModelMatrix;
 
@@ -319,7 +320,6 @@ void update(float elapsed, Entity& sSq, Entity& mSq, Entity& bSq, Entity& lw, En
 	tw.Update(elapsed);
 	bw.Update(elapsed);*/
 	
-
 }
 
 void render(Entity& sSq, Entity& mSq, Entity& bSq, Entity& lw, Entity& rw, Entity& tw, Entity& bw) {
@@ -340,13 +340,14 @@ void init(Entity& sSq, Entity& mSq, Entity& bSq) {
 	
 	mSq.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
 	mSq.accel *= -1.0f;
-	mSq.accely = 0.0f;
+	//mSq.accely = 0.0f;
 	mSq.position.x = 0.0f;
 	mSq.position.y = 0.0f;
 	mSq.name = "med";
 
 	bSq.setVectorCoords(-0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1);
-	bSq.accely *= -5.0f;
+	bSq.accel *= -1.0f;
+	//bSq.accely *= -5.0f;
 	bSq.position.x = 2.0f;
 	bSq.position.y = 0.25f;
 	bSq.name = "big";
