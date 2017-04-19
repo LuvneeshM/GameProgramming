@@ -17,6 +17,8 @@
 
 #include <Windows.h>
 
+#include <SDL_mixer.h>
+
 using namespace std;
 
 #ifdef _WINDOWS
@@ -30,6 +32,15 @@ SDL_Window* displayWindow;
 //gloabl stuff
 int winner = 0;
 bool gameOn = false;
+
+//int Mix_OpenAudio(int frequency, Uint16 format, int channels, int chunksize);
+//
+//Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+
+Mix_Chunk *hitWall;
+Mix_Chunk *hitPaddle;
+Mix_Music *music;
+
 
 void DrawText(ShaderProgram *program, int fontTexture, std::string text, float size, float spacing) {
 	float texture_size = 1.0 / 16.0f;
@@ -103,15 +114,7 @@ public:
 		centerX(cX), centerY(cY), width(w), height(h), movingY(mY), movingX(mX), type(t){
 	}
 
-	void update(float elapsed/*, std::vector<Entity>& allEntities*/){
-		//for (int i = 0; i < allEntities.size(); i++){
-		//	if (&allEntities[i] != this)
-		//	{
-		//		if (this->type == "ball")
-		//			collisionCheck(allEntities[i]);
-		//	}
-		//}
-
+	void update(float elapsed){
 		modelMatrix.identity();
 		if (movingY){
 			if (type == "ball") {
@@ -127,9 +130,7 @@ public:
 			centerX += speedX * elapsed;
 		}
 		modelMatrix.Translate(centerX, centerY, 0.0f);
-		/*if (type == "wall"){
-			modelMatrix.Translate(centerX, 1.0f, 0.0f);
-		}*/
+
 		if (type == "paddle")
 			modelMatrix.Scale(width/2, height/2, 0.0f);//(0.125f, 0.5f, 0.0f);
 		else if (type == "ball")
@@ -164,24 +165,13 @@ public:
 				!(r1.centerX + r1.width / 2 <= this->centerX - this->width / 2) //r1 right < r2 left
 				) {
 				hit = &r1;
-				//DELETE THIS
-				/*if (r1.type == "paddle"){
-					ofstream log;
-					log.open("log.txt");
-					log << r1.type << r1.centerX << " " << r1.centerY << " " << r1.width / 2 << " " << r1.height / 2 << endl;
-					log << this->type << centerX << " " << centerY << " " << width / 2 << " " << height / 2 << endl;
-					log << endl << r1.centerY - r1.height / 2 << " > " << this->centerY + this->height / 2;
-					log << endl << r1.centerY + r1.height / 2 << " < " << this->centerY - this->height / 2;
-					log << endl << r1.centerX - r1.width / 2 << " > " << this->centerX + this->width / 2;
-					log << endl << r1.centerX + r1.width / 2 << " < " << this->centerX - this->width / 2;
-					log << endl << r1.centerY - r1.height / 2 << " <= " << this->centerY - this->height / 2;
-					log.close();
-				}*/
+
 				//hit a wall
 				if (r1.type == "wall") {
 					//I am a ball
 					if (this->type == "ball") {
 						this->speedY *= -1;
+						Mix_PlayChannel(-1, hitWall, 0);
 					}
 					//I am a paddle....
 					if (this->type == "paddle") {
@@ -195,10 +185,7 @@ public:
 				}
 				//hit a paddle
 				else if (r1.type == "paddle") {
-					//r1.entityToString();
-					//OutputDebugString("\n");
-					//this->entityToString();
-					//OutputDebugString("\n");
+					Mix_PlayChannel(2, hitPaddle, 0);
 					//be specific
 					//left/right
 					//left
@@ -219,16 +206,7 @@ public:
 							this->speedX *= -1;
 						}
 					}
-					
-					/*if ( ((r1.centerX + r1.width / 2 >= this->centerX - this->width / 2) || (r1.centerX - r1.width / 2 <= this->centerX + this->width / 2)) &&
-						(r1.centerY + r1.height/2 >= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2) 
-						//|| (r1.centerY - r1.height/2 <= this->centerY + this->height/2 && r1.centerY - r1.height/2 <= this->centerY - this->height/2)
-						){
-						//if ((r1.centerY + r1.height / 2 >= this->centerY + this->height / 2) && (r1.centerY - r1.height / 2 <= this->centerY - this->height / 2)) {
-							this->speedX *= -1;
-						//}
 
-					}*/
 					//hit bot/top
 					if ( ((r1.centerY - r1.height / 2 <= this->centerY + this->height / 2) && (r1.centerY - r1.height /2 >= this->centerY - this->height/2)) || 
 						((r1.centerY + r1.height / 2 >= this->centerY - this->height / 2) && (r1.centerY + r1.height/2 <= this->centerY + this->height/2)) ) {
@@ -280,37 +258,6 @@ public:
 	}
 
 };
-/*
-class Paddle{
-public:
-	float top, bot, left, right, centerX, centerY,  width,  height; 
-
-	float paddleSpeed = 0.0f;
-
-	Paddle(float t, float b, float l, float r, float cx, float cy, float w, float y) : top(t), bot(b), left(l), right(r), centerX(cx), centerY(cy), width(w), height(y){ }
-};
-
-class Ball{
-public:
-	float width;
-	float height;
-
-	float xCoord = 0.0f;
-	float yCoord = 0.0f;
-	float xDir = -1.0f;//(float)rand();
-	float yDir = -1.0f;// (float)rand(); //FIX THIS
-	float vel = 1.0f;
-	float accel = 0.05f;
-
-	Ball(float xC, float yC,float w, float h) : xCoord(xC), yCoord(yC), width(w), height(h) {}
-
-	void movement(float elapsed){
-		xCoord += xDir * vel * elapsed;
-		std::cout << yCoord << std::endl;
-		yCoord += yDir * vel * elapsed;
-	}
-};
-*/
 
 void setUp(Entity& leftPaddleE, Entity& rightPaddleE, Entity& ballE){
 	leftPaddleE = Entity(-3.125f, 0.0f, 0.5f, 1.0f, true, false, "paddle");
@@ -328,6 +275,14 @@ int main(int argc, char *argv[])
 		glewInit();
 	#endif
 
+		Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+
+		hitWall = Mix_LoadWAV("sub.wav");
+		hitPaddle = Mix_LoadWAV("Sonar2.wav");
+		music = Mix_LoadMUS("music.mp3");
+
+		Mix_PlayMusic(music, -1);
+
 		//left Paddle
 		Entity leftPaddleE;
 		GLuint leftPaddle = LoadTexture(RESOURCE_FOLDER"PaddleSprite.png");
@@ -342,9 +297,7 @@ int main(int argc, char *argv[])
 		GLuint wallSprite = LoadTexture(RESOURCE_FOLDER"WallSprite.png");
 		Entity topWallE(0.0f, 1.95f, 3.55 * 2, 0.1, false, false, "wall");
 		Entity botWallE(0.0f, -1.95f, 3.55 * 2, 0.1, false, false, "wall");
-		
-		//std::vector<Entity> allEntity = { leftPaddleE, rightPaddleE, ballE, topWallE, botWallE };
-		
+				
 		//font
 		GLuint font = LoadTexture(RESOURCE_FOLDER"font1.png");
 		string whoWon = "";
@@ -428,10 +381,10 @@ int main(int argc, char *argv[])
 
 		//walls
 		//top
-		topWallE.update(elapsed/*, allEntity*/);
+		topWallE.update(elapsed);
 		topWallE.draw(program, wallSprite);
 		//bot
-		botWallE.update(elapsed/*, allEntity*/);
+		botWallE.update(elapsed);
 		botWallE.draw(program, wallSprite);
 
 		if (gameOn){
@@ -449,10 +402,10 @@ int main(int argc, char *argv[])
 			rightPaddleE.collisionCheck(botWallE);
 			//updates
 			//paddles
-			leftPaddleE.update(elapsed/*, allEntity*/);
-			rightPaddleE.update(elapsed/*, allEntity*/);
+			leftPaddleE.update(elapsed);
+			rightPaddleE.update(elapsed);
 			//ball
-			ballE.update(elapsed/*, allEntity*/);
+			ballE.update(elapsed);
 		}
 		//
 		//draw
@@ -481,114 +434,6 @@ int main(int argc, char *argv[])
 
 		}
 
-			//left paddle entity
-			//draw
-			
-			//glBindTexture(GL_TEXTURE_2D, leftPaddle);
-			//float leftPaddleVert[] = { -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
-			//glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, leftPaddleVert);
-			//glEnableVertexAttribArray(program.positionAttribute);
-			////show all of image
-			//float leftPaddleTextCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-			//glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, leftPaddleTextCoords);
-			//glEnableVertexAttribArray(program.texCoordAttribute);
-			//program.setModelMatrix(leftPaddleE.modelMatrix);
-			//glDrawArrays(GL_TRIANGLES, 0, 6);
-			//glDisableVertexAttribArray(program.positionAttribute);
-			//glDisableVertexAttribArray(program.texCoordAttribute);
-
-
-			/*
-			//left paddle
-			glBindTexture(GL_TEXTURE_2D, leftPaddle);
-			//set vertices
-			float leftPaddleVert[] = { -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
-			glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, leftPaddleVert);
-			glEnableVertexAttribArray(program.positionAttribute);
-			//show all of image
-			float leftPaddleTextCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-			glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, leftPaddleTextCoords);
-			glEnableVertexAttribArray(program.texCoordAttribute);
-
-			modelLeftPadd.identity();
-			//keep track of center
-			leftPad.centerY += leftPad.paddleSpeed * elapsed;
-			modelLeftPadd.Translate(leftPad.centerX, leftPad.centerY, 0.0f);
-
-			program.setModelMatrix(modelLeftPadd);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-
-			glDisableVertexAttribArray(program.positionAttribute);
-			glDisableVertexAttribArray(program.texCoordAttribute);
-			*/
-			//right paddle
-			/*glBindTexture(GL_TEXTURE_2D, rightPaddle);
-			//vertices
-			float rightPaddleVert[] = { -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
-			glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, rightPaddleVert);
-			glEnableVertexAttribArray(program.positionAttribute);
-			//image
-			float rightPaddleTextCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-			glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, rightPaddleTextCoords);
-			glEnableVertexAttribArray(program.texCoordAttribute);
-
-			modelRightPadd.identity();
-			//track center
-			rightPad.centerY += rightPad.paddleSpeed * elapsed;
-			modelRightPadd.Translate(rightPad.centerX, rightPad.centerY, 0.0f);
-
-			program.setModelMatrix(modelRightPadd);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-
-			glDisableVertexAttribArray(program.positionAttribute);
-			glDisableVertexAttribArray(program.texCoordAttribute);
-			*/
-	
-			//ball
-			//glBindTexture(GL_TEXTURE_2D, ballSprite);
-			////vertices
-			//float ballV[] = { -0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1 };
-			//glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, ballV);
-			//glEnableVertexAttribArray(program.positionAttribute);
-			////uv
-			//float ballTextCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-			//glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, ballTextCoords);
-			//glEnableVertexAttribArray(program.texCoordAttribute);
-			//
-			//modelBall.identity();
-			//
-			////collision checks
-			////left paddle
-			///*if (!(leftPad.centerY - leftPad.height / 2 >= ball.yCoord + ball.height / 2) && //r1 bot > r2 top
-			//	!(leftPad.centerY + leftPad.height / 2 <= ball.yCoord - ball.height / 2) && //r1 top < r2 bot
-			//	!(leftPad.centerX - leftPad.width / 2 >= ball.xCoord + ball.width / 2) && //r1 left > r2 right
-			//	!(leftPad.centerX + leftPad.width / 2 <= ball.xCoord - ball.width / 2) //r1 right < r2 left
-			//	){
-			//	ball.xDir *= -1;
-			//}*/
-
-			////collision with screen boundaries
-			////lower wall || upper wall
-			//if ((ball.yCoord + ball.height / 2) >= 2.0 || (ball.yCoord - ball.height / 2) <= -2.0f){
-			//	ball.yDir *= -1;
-			//	//ball.vel += ball.accel; //make it a bit faster
-			//} 
-
-			//if (ball.xCoord <= -3.55f || ball.xCoord >= 3.55f){
-			//	ball.xDir *= -1;
-			//	ball.yCoord = 0;
-			//	ball.xCoord = 0;
-			//}
-
-			////no collision
-			////just keep moving
-			//ball.movement(elapsed);
-			//modelBall.Translate(ball.xCoord, ball.yCoord, 0.0f);
-			//program.setModelMatrix(modelBall);
-			//glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		
-
 		program.setProjectionMatrix(projectionMatrix);
 		program.setViewMatrix(viewMatrix);
 		
@@ -597,6 +442,11 @@ int main(int argc, char *argv[])
 		
 		SDL_GL_SwapWindow(displayWindow);
 	}
+
+	//cleanup
+	Mix_FreeChunk(hitWall);
+	Mix_FreeChunk(hitPaddle);
+	Mix_FreeMusic(music);
 
 	SDL_Quit();
 	return 0;
