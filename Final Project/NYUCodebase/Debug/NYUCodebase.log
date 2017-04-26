@@ -1,0 +1,58 @@
+﻿Build started 4/23/2017 4:50:36 AM.
+     1>Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\NYUCodebase\NYUCodebase.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /IC:\SDL2\include /IC:\SDL2_image\include /IC:\glew\include /IC:\SDL2_mixer\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _WINDOWS /D _MBCS /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(53): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(157): warning C4244: 'initializing' : conversion from 'double' to 'int', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(161): warning C4244: 'return' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(198): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(206): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(222): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(223): warning C4244: '+=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(228): warning C4305: '=' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(299): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(308): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(310): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(325): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(333): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(339): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(349): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(360): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(361): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(419): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\program files (x86)\microsoft visual studio 12.0\vc\include\tuple(80): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+                 c:\program files (x86)\microsoft visual studio 12.0\vc\include\tuple(233) : see reference to function template instantiation 'std::_Tuple_val<_This>::_Tuple_val<_Ty>(_Other &&)' being compiled
+                 with
+                 [
+                     _This=float
+         ,            _Ty=int
+         ,            _Other=int
+                 ]
+                 c:\program files (x86)\microsoft visual studio 12.0\vc\include\tuple(233) : see reference to function template instantiation 'std::_Tuple_val<_This>::_Tuple_val<_Ty>(_Other &&)' being compiled
+                 with
+                 [
+                     _This=float
+         ,            _Ty=int
+         ,            _Other=int
+                 ]
+                 c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(386) : see reference to function template instantiation 'std::tuple<float,float,float,float>::tuple<int,int,int,int,std::_Tuple_enable<std::tuple<>,std::tuple<>>::type>(_This2 &&,int &&,int &&,int &&)' being compiled
+                 with
+                 [
+                     _This2=int
+                 ]
+                 c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(386) : see reference to function template instantiation 'std::tuple<float,float,float,float>::tuple<int,int,int,int,std::_Tuple_enable<std::tuple<>,std::tuple<>>::type>(_This2 &&,int &&,int &&,int &&)' being compiled
+                 with
+                 [
+                     _This2=int
+                 ]
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\Debug\NYUCodebase.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\SDL2_mixer\lib\x86 /LIBPATH:C:\SDL2\lib\x86 /LIBPATH:C:\SDL2_image\lib\x86 /LIBPATH:C:\glew\lib\Release\Win32 SDL2.lib SDL2_mixer.lib glew32.lib SDL2main.lib SDL2_image.lib OpenGL32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\Debug\NYUCodebase.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\Debug\NYUCodebase.lib" /MACHINE:X86 Debug\main.obj
+         Debug\Matrix.obj
+         Debug\ShaderProgram.obj
+         NYUCodebase.vcxproj -> C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\Debug\NYUCodebase.exe
+     1>Done Building Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\NYUCodebase\NYUCodebase.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:04.83
