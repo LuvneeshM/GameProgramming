@@ -15,6 +15,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 #include <Windows.h>
 #include <tuple>
@@ -83,13 +84,15 @@ void DrawText(ShaderProgram *program, int fontTexture, std::string text, float s
 
 class SheetSprite {
 public:
-	SheetSprite(unsigned int xtextureID, float tu, float tv, float twidth, float theight, float tsize) {
+	SheetSprite(unsigned int xtextureID, float tu, float tv, float twidth, float theight, float tsize, float aw, float ah) {
 		u = tu;
 		v = tv;
 		width = twidth;
 		height = theight;
 		size = tsize;
 		textureID = xtextureID;
+		this->aW = aw;
+		this->aH = ah;
 	}
 	SheetSprite() {}
 	void Draw(ShaderProgram *program);
@@ -100,6 +103,8 @@ public:
 	float v;
 	float width;
 	float height;
+	float aW;
+	float aH;
 };
 void SheetSprite::Draw(ShaderProgram *program) {
 
@@ -112,7 +117,7 @@ void SheetSprite::Draw(ShaderProgram *program) {
 		u + width, v + height
 	};
 
-	float aspect = width / height;
+	float aspect = aW / aH;
 
 	float vertices[] = {
 		-0.5f * size * aspect, -0.5f * size,
@@ -140,6 +145,7 @@ void SheetSprite::Draw(ShaderProgram *program) {
 class Entity;
 
 bool win = false;
+int score = 0;
 
 //for player
 GLuint ludioSheet;
@@ -149,6 +155,8 @@ float ludioSize = 1.0f;
 vector<tuple<float, float, float, float>> ludioMovesData;
 
 //for enemies
+vector<Entity> enemiesBasis; //enemies starter 
+vector<Entity> enemiesToFight; //real enemies based of basis
 GLuint enemiesSheet;
 vector<tuple<float, float, float, float>> enemiesAnimData;
 int flyIndex = 0;
@@ -158,6 +166,8 @@ float enSize = 0.5f;
 //platform
 vector<Entity> platform;
 
+enum GameState { TITLE_SCREEN, GAME_STATE, GAME_OVER };
+GameState state;
 
 
 float lerp(float v0, float v1, float t) {
@@ -179,6 +189,7 @@ public:
 		this->yVel = yVel;
 		this->xVel = xVel;
 		this->alive = alive;
+		aspect = this->width / this->height;
 		//for animation
 		ludioNumFrames = 11;
 		animationElapsed = 0.0f;
@@ -190,82 +201,138 @@ public:
 			//each entity has its own animation time
 			animationElapsed += elapsed;
 			if (type == "player") {
-				yVel = lerp(yVel, 0.0f, elapsed*friction_y);
+				
 				//only jump once
 				if (!jump) {
 					const Uint8 *keys = SDL_GetKeyboardState(NULL);
 					if (keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_SPACE]) {
 						if (collidedBottom == true) yVel = 4.0f;
 						jump = true;
+						
 					}
 					//animate walking man
-					if (animationElapsed > 1.0f / framesPerSecond) {
+					if (animationElapsed > 1.0f / framesPerSecond) 
+					{
+						float Swidth = get<2>(ludioMovesData[ludioIndex]);
+						float Sheight = get<3>(ludioMovesData[ludioIndex]) ;
+						aspect = Swidth / Sheight;
 						sprite = SheetSprite(ludioSheet, get<0>(ludioMovesData[ludioIndex]) / 512.0f,
-							get<1>(ludioMovesData[ludioIndex]) / 512.0f, get<2>(ludioMovesData[ludioIndex]) / 512.0f,
-							get<3>(ludioMovesData[ludioIndex]) / 512.0f, ludioSize);
+							get<1>(ludioMovesData[ludioIndex]) / 512.0f, Swidth / 512.0f, Sheight / 512.0f, ludioSize, (Swidth*aspect), (Sheight*aspect));
 						ludioIndex = (ludioIndex + 1) % ludioMovesData.size();
 						animationElapsed = 0.0f;
 					}
 				}
 				//change sprite to jump one
 				else if (jump) {
+					float Swidth = 67.0f / 512.0f;
+					float Sheight = 94.0f / 512.0f;
+					aspect = Swidth / Sheight;
 					sprite = SheetSprite(ludioSheet, 438.0f / 512.0f,
-						93.0f / 512.0f, 67.0f / 512.0f,
-						94.0f / 512.0f, ludioSize);
+						93.0f / 512.0f, Swidth, Sheight, ludioSize, (Swidth*aspect), (Sheight*aspect));
+					yVel = lerp(yVel, 0.0f, elapsed*friction_y);
+
 				}
 				yVel += acceleration_y * elapsed;
+				if (y > 1.2f) {
+					yVel = -0.5f;
+				}
+
 				y += yVel * elapsed;
 				collideWithGroundY();
+
+
+				//THIS WORKS, COMMENTED OUT FOR NOW TO ADD TO GAME PLAY
+				//AD THIS BACK IN LATER TO LOSE GAME
+				/*for (Entity& e : enemies) {
+					collideWithEntity(e);
+				}*/
 			}
-			//fly animated
+			//enemies
 			else {
 
-				//the enemies
+				//fly enemies
 				if (type == "fly") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
+						float Swidth = get<2>(enemiesAnimData[flyIndex]) ;
+						float Sheight = get<3>(enemiesAnimData[flyIndex]);
+						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[flyIndex]) / 353.0f,
-							get<1>(enemiesAnimData[flyIndex]) / 153.0f, get<2>(enemiesAnimData[flyIndex]) / 353.0f,
-							get<3>(enemiesAnimData[flyIndex]) / 153.0f, enSize);
+							get<1>(enemiesAnimData[flyIndex]) / 153.0f, Swidth / 353.0f,
+							Sheight / 153.0f, enSize, (Swidth*aspect*(153.0f / 353.0f)), (Sheight*aspect*(153.0f / 353.0f)));
 						flyIndex = (flyIndex + 1) % 2;
 						animationElapsed = 0.0f;
 					}
-					//check for collision with player
 					//check for "collision" off screen
 				}
 				//glop anim
 				if (type == "glop") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
+						float Swidth = get<2>(enemiesAnimData[glopIndex]) ;
+						float Sheight = get<3>(enemiesAnimData[glopIndex]);
+						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[glopIndex]) / 353.0f,
-							get<1>(enemiesAnimData[glopIndex]) / 153.0f, get<2>(enemiesAnimData[glopIndex]) / 353.0f,
-							get<3>(enemiesAnimData[glopIndex]) / 153.0f, enSize);
-						glopIndex = ((glopIndex + 1) % 2) + 2;
+							get<1>(enemiesAnimData[glopIndex]) / 153.0f, Swidth / 353.0f,
+							Sheight / 153.0f, enSize, (Swidth*aspect*(153.0f / 353.0f)), (Sheight*aspect*(153.0f / 353.0f)));
 						animationElapsed = 0.0f;
+						glopIndex = ((glopIndex + 1) % 2) + 2;
+						
 					}
+					
 					//fall down to ground
 					yVel += acceleration_y * elapsed;
 					y += yVel *elapsed;
 					collideWithGroundY();
-					//check for collision with player
 					//check for "collision" off screen
 				}
 				if (type == "snail") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
+						float Swidth = get<2>(enemiesAnimData[snailIndex]) ;
+						float Sheight = get<3>(enemiesAnimData[snailIndex]) ;
+						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[snailIndex]) / 353.0f,
-							get<1>(enemiesAnimData[snailIndex]) / 153.0f, get<2>(enemiesAnimData[snailIndex]) / 353.0f,
-							get<3>(enemiesAnimData[snailIndex]) / 153.0f, enSize);
+							get<1>(enemiesAnimData[snailIndex]) / 153.0f, Swidth / 353.0f,
+							Sheight / 153.0f, enSize, (Swidth*aspect*(153.0f / 353.0f)), (Sheight*aspect*(153.0f / 353.0f)));
 						snailIndex = ((snailIndex + 1) % 2) + 4;
 						animationElapsed = 0.0f;
 					}
 					yVel += acceleration_y * elapsed;
 					y += yVel *elapsed;
 					collideWithGroundY();
-					//check for collision with player
 					//check for "collision" off screen
 				}
 				if (xVel <= 5.0f) {
 					xVel += acceleration_x * elapsed;
 				}
+				//move in x
+				//for all enemies
 				x -= xVel * elapsed;
+				//they have done their job and failed
+				offScreen();
+			}
+		}
+	}
+
+	//entity now off screen
+	//it served it purpose
+	void offScreen() {
+		if (this->x + width / 2 < -3.60f) {
+			alive = false;
+		}
+	}
+
+	//only will be called for between player and enemies
+	void collideWithEntity(Entity& enem) {
+		//I collided with something to my right
+		//but it is did not fully pass me 
+		if (this->x + width / 2 > enem.x - enem.width / 2 &&
+			this->x-width/2 < enem.x - enem.width/2) {
+			if (this->y - height / 2 < enem.y + enem.height / 2 && this->y + height / 2 > enem.y - height / 2) {
+				stringstream ss;
+				ss << enem.type;
+				OutputDebugString(ss.str().c_str());
+				win = false; 
+				state = GAME_OVER;
+			//	return true;
 			}
 		}
 	}
@@ -273,17 +340,21 @@ public:
 	void collideWithGroundY() {
 		//check with only 1st row 
 		//1st row all same so check any of the 15 y
-			if (this->y-height/2 < platform[0].y+platform[0].height/2-0.5) {
+			if (this->y-height/2 < platform[0].y+platform[0].height/2-0.25) {
 				collidedBottom = true;
 				yVel = 0.0f;
 				acceleration_y = 0.0f;
-				pen_y = (platform[0].height/2 + platform[0].y-0.5) - (y-height/2);
+				pen_y = (platform[0].height/2 + platform[0].y-0.25) - (y-height/2);
+				stringstream ss;
+				ss << this->y - height / 2 << " " << platform[0].y + platform[0].height / 2 << " " <<pen_y << " ";
 				y += pen_y + 0.002;
+				ss << this->y - height / 2 << endl;
+				//OutputDebugString(ss.str().c_str());
 				jump = false;
 			}
 			else {
 				collidedBottom = false;
-				acceleration_y = -3.8;
+				acceleration_y = -3.7;
 				pen_y = 0;
 			
 			}
@@ -316,6 +387,8 @@ public:
 	float width;
 	float height;
 
+	float aspect;
+	
 	bool alive;
 	bool jump = false;
 
@@ -358,7 +431,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float platformY = -1.0f;
 	for (int i = 0; i < 15; i++) {
 		Entity platformT  = Entity(platformX, platformY, 0.5*platSize*platAspect * 2, 0.5f*platSize * 2, "platformTop", 0.0f, 0.0f, true);
-		platformT.sprite = SheetSprite(platSheet, 144.0f / 1024.0f, 792.0f / 1024.0f, platW / 1024.0f, platH / 1024.0f, platSize);
+		platformT.sprite = SheetSprite(platSheet, 144.0f / 1024.0f, 792.0f / 1024.0f, platW / 1024.0f, platH / 1024.0f, platSize, platW / 1024.0f, platH / 1024.0f);
 		platform.push_back(platformT);
 		//right to left fill 
 		//last is first 
@@ -369,7 +442,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	platformY = platformY - platSize +0.01;
 	for (int i = 0; i < 15; i++) {
 		Entity platformT = Entity(platformX, platformY, 0.5*platSize*platAspect * 2, 0.5f*platSize * 2, "platformBot", 0.0f, 0.0f, true);
-		platformT.sprite = SheetSprite(platSheet, 720.0f / 1024.0f, 864.0f / 1024.0f, platW / 1024.0f, platH / 1024.0f, platSize);
+		platformT.sprite = SheetSprite(platSheet, 720.0f / 1024.0f, 864.0f / 1024.0f, platW / 1024.0f, platH / 1024.0f, platSize, platW / 1024.0f, platH / 1024.0f);
 		platform.push_back(platformT);
 		//right to left fill 
 		//last is first 
@@ -384,45 +457,63 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float playerX = -2.0f;
 	float playerY = 0.0f;
 	player = Entity(playerX, playerY, 0.5*playerSize*playerAspect * 2.0f, 0.5f*playerSize*2.0f, "player", 0.0f, 0.0f, true);
-	player.sprite = SheetSprite(playerSheet, 67.0f / 512.0f, 196.0f / 512.0f, playerW / 512.0f, playerH / 512.0f, playerSize);
+	player.sprite = SheetSprite(playerSheet, 67.0f / 512.0f, 196.0f / 512.0f, playerW / 512.0f, playerH / 512.0f, playerSize, playerW / 512.0f, playerH / 512.0f);
 	//enemies
 	//starting 
 	//1 of each
 	//fly walk 1
-	float flySize = 0.5f;
+	float flySize = enSize;
 	float flyW = 72.0f;
 	float flyH = 36.0f; 
 	float flyAsp = flyW / flyH;
-	float flyX = 0.0f;
-	float flyY = 0.0f;
-	Entity fly = Entity(flyX, flyY, 0.5*flySize*flyAsp * 2, 0.5f*flySize * 2, "fly", 1.0f, 0.0f, true);
-	fly.sprite = SheetSprite(eSheets, 0.0f / 353.0f, 32.0f / 153.0f, flyW / 353.0f, flyH / 153.0f, flySize); //mult flysize by fly aspect and the spritesheet aspect
-		/*SheetSprite(enemiesSheet, get<0>(enemiesAnimData[0]) / 353.0f,
-			get<1>(enemiesAnimData[0]) / 153.0f, get<2>(enemiesAnimData[0]) / 353.0f,
- 			get<3>(enemiesAnimData[0]) / 153.0f, enSize);*/
+	float flyX = 4.25f;
+	float flyY = 1.0f;
+	Entity fly = Entity(flyX, flyY, 0.5*flySize*flyAsp * 2, 0.5f*flySize * 2, "fly", 1.250f, 0.0f, true);
+	fly.sprite = SheetSprite(eSheets, 0.0f / 353.0f, 32.0f / 153.0f, flyW / 353.0f, flyH / 153.0f, flySize,(flyW*flyAsp*(153.0f/353.0f)),(flyH*flyAsp*(153.0f/353.0f))); //mult flysize by fly aspect and the spritesheet aspect
 	e.push_back(fly);
 	//glop walk 
-	float glopSize = 0.5f;
+	float glopSize = enSize;
 	float glopW = 50.0f;
 	float glopH = 28.0f;
 	float glopAsp = glopW / glopH;
-	float glopX = 1.2f;
-	float glopY = 0.0f;
-	Entity glop = Entity(glopX, glopY, 0.5*glopSize*glopAsp * 2, 0.5f*glopSize * 2, "glop", 1.4f, 0.0f, true);
-	glop.sprite = SheetSprite(eSheets, 52.0f / 353.0f, 125.0f / 153.0f, glopW / 353.0f, glopH / 153.f, glopSize);
+	float glopX = 4.25f;
+	float glopY = -0.50f;
+	Entity glop = Entity(glopX, glopY, 0.5*glopSize*glopAsp * 2, 0.5f*glopSize * 2, "glop", 2.1f, 0.0f, true);
+	glop.sprite = SheetSprite(eSheets, 52.0f / 353.0f, 125.0f / 153.0f, glopW / 353.0f, glopH / 153.f, glopSize, (glopW*glopAsp*(153.0f / 353.0f)), (glopH*glopAsp*(153.0f / 353.0f)));
 	e.push_back(glop);
 	//snail walk 1
-	float snailSize = 0.5f;
+	float snailSize = enSize;
 	float snailW = 54.0f;
 	float snailH = 31.0f;
 	float snailAsp = snailW / snailH;
-	float snailX = -0.75f;
-	float snailY = 0.0f;
-	Entity snail = Entity(snailX, snailY, 0.5*snailSize*snailAsp * 2, 0.5f*snailSize * 2, "snail", 0.75f, 0.0f, true);
-	snail.sprite = SheetSprite(eSheets, 143.0f / 353.0f, 34.0f / 153.0f, snailW / 353.0f, snailH / 153.f, snailSize);
+	float snailX = 4.25f;
+	float snailY = -0.50f;
+	Entity snail = Entity(snailX, snailY, 0.5*snailSize*snailAsp * 2, 0.5f*snailSize * 2, "snail", 1.0f, 0.0f, true);
+	snail.sprite = SheetSprite(eSheets, 143.0f / 353.0f, 34.0f / 153.0f, snailW / 353.0f, snailH / 153.f, snailSize, (snailW*snailAsp*(153.0f / 353.0f)), (snailH*snailAsp*(153.0f / 353.0f)));
 	e.push_back(snail);
 }
 
+//render the new enemies
+void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow) {
+	int spawnPick = rand() % 3; //range: 0 to 2
+	if (spawnPick == 0 && score > 500) { //fly
+		enemiesShow.push_back(list[0]);
+	}
+	else if (spawnPick == 1 && score > 750) { //glop
+		enemiesShow.push_back(list[1]);
+	}
+	else if (spawnPick == 2) { //snail
+		enemiesShow.push_back(list[2]);
+	}
+}
+
+void purge() {
+	enemiesToFight.erase(
+		std::remove_if(enemiesToFight.begin(), enemiesToFight.end(), [](Entity& p) {return !p.alive;}
+			),
+		enemiesToFight.end()
+		);
+}
 
 int main(int argc, char *argv[])
 {
@@ -469,16 +560,13 @@ int main(int argc, char *argv[])
 
 		Entity ludio; //player
 		
-		vector<Entity> enemies; //enemies
+		//vector<Entity> enemies; //enemies
 		
 		//setUp
-		setUp(platform,platformSheet, ludio, ludioSheet, enemies, enemiesSheet);
+		setUp(platform,platformSheet, ludio, ludioSheet, enemiesBasis, enemiesSheet);
 
 		
-
-
-		enum GameState {TITLE_SCREEN, GAME_STATE, GAME_OVER};
-		GameState state = TITLE_SCREEN;
+		state = TITLE_SCREEN;
 		win = false;
 
 		glViewport(0, 0, 640, 360);
@@ -492,14 +580,15 @@ int main(int argc, char *argv[])
 		glUseProgram(program.programID);
 
 		float lastTick = 0.0f;
-
+		float scoreElapsed = 0.0f;
+		float renderEnemyNow = 0.0f;
 	SDL_Event event;
 	bool done = false;
 	while (!done) {
 		float ticks = (float)SDL_GetTicks() / 1000.0f;
 		float elapsed = ticks - lastTick;
 		lastTick = ticks;
-
+		
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
 				done = true;
@@ -517,7 +606,11 @@ int main(int argc, char *argv[])
 					//reset everything
 					win = false;
 					
-					setUp(platform, platformSheet, ludio, ludioSheet, enemies, enemiesSheet);
+					setUp(platform, platformSheet, ludio, ludioSheet, enemiesBasis, enemiesSheet);
+					for (Entity& e : enemiesToFight) {
+						e.alive = false;
+					}
+					purge();
 				}
 
 			}
@@ -527,7 +620,7 @@ int main(int argc, char *argv[])
 		const Uint8 *keys = SDL_GetKeyboardState(NULL);
 		float vertices[] = { -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };
 		float textCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-
+		stringstream sss;
 		switch (state) {
 			case TITLE_SCREEN:
 				//Title
@@ -557,11 +650,30 @@ int main(int argc, char *argv[])
 
 			//play
 			case GAME_STATE:
+				scoreElapsed += elapsed;
+				if (scoreElapsed > 1.0f / 60.0f) {
+					score++;
+					scoreElapsed = 0.0f;
+				}
+				/*
+				sss << score << " ";
+				OutputDebugString(sss.str().c_str());*/
+				//procedurally generated enemies
+				//kind of.....
+				//render enemy function
+				renderEnemyNow += elapsed;
+				if (renderEnemyNow > 2.0f) {
+					renderEnemy(enemiesBasis, enemiesToFight);
+					renderEnemyNow = 0.0f;
+				}
+				/*sss << renderEnemyNow << " ";
+				OutputDebugString(sss.str().c_str());
+*/
 				
 				//update
 				ludio.update(elapsed);
-				for (Entity& e1 : enemies) {
-					//e1.update(elapsed);
+				for (Entity& e1 : enemiesToFight) {
+					e1.update(elapsed);
 				}
 				//draw
 				for (Entity& pl : platform) {
@@ -569,10 +681,13 @@ int main(int argc, char *argv[])
 				}
 				ludio.draw(&program);
 
-				for (Entity& e1 : enemies) {
+				for (Entity& e1 : enemiesToFight) {
 					e1.draw(&program);
 				}
-
+				//purge...
+				if (enemiesToFight.size() != 0) {
+					purge();
+				}
 				break;
 
 			case GAME_OVER:
