@@ -1,6 +1,7 @@
 //Luvneesh Mugrai
 //Intro to Game Programming
-//Space Inavders
+//Lets Go For a Walk 
+//Final Project
 
 #ifdef _WINDOWS
 	#include <GL/glew.h>
@@ -30,7 +31,58 @@ using namespace std;
 
 SDL_Window* displayWindow;
 
+#define FIXED_TIMESTEP 0.01666666f
+#define MAX_TIMESTEPS 6
+
+class Entity;
+
+bool win = false;
+float score = 00.0;
+
+//for player
+GLuint ludioSheet;
+
+//player animations
+int ludioIndex = 0;
+float ludioSize = 1.0f;
+vector<tuple<float, float, float, float>> ludioMovesData;
+
+//for enemies
+vector<Entity> enemiesBasis; //enemies starter 
+vector<Entity> enemiesToFight; //real enemies based of basis
+GLuint enemiesSheet;
+vector<tuple<float, float, float, float>> enemiesAnimData;
+int flyIndex = 0;
+int glopIndex = 2;
+int snailIndex = 4;
+float enSize = 0.5f;
+//platform
+vector<Entity> platform;
+
+enum GameState { TITLE_SCREEN, GAME_STATE, GAME_OVER, GAME_OVER_DRAW_ONLY };
+GameState state;
+
+
 GLuint LoadTexture(const char *filePath) {
+	int w, h, comp;
+	unsigned char* image = stbi_load(filePath, &w, &h, &comp, STBI_rgb_alpha);
+	if (image == NULL) {
+		std::cout << "Unable to load image. Make sure the path is correct\n";
+		assert(false);
+	}
+	GLuint retTexture;
+	glGenTextures(1, &retTexture);
+	glBindTexture(GL_TEXTURE_2D, retTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	stbi_image_free(image);
+	return retTexture;
+}
+
+GLuint LoadTextureLinear(const char *filePath) {
 	int w, h, comp;
 	unsigned char* image = stbi_load(filePath, &w, &h, &comp, STBI_rgb_alpha);
 	if (image == NULL) {
@@ -142,34 +194,6 @@ void SheetSprite::Draw(ShaderProgram *program) {
 
 }
 
-class Entity;
-
-bool win = false;
-int score = 0;
-
-//for player
-GLuint ludioSheet;
-//player animations
-int ludioIndex = 0;
-float ludioSize = 1.0f;
-vector<tuple<float, float, float, float>> ludioMovesData;
-
-//for enemies
-vector<Entity> enemiesBasis; //enemies starter 
-vector<Entity> enemiesToFight; //real enemies based of basis
-GLuint enemiesSheet;
-vector<tuple<float, float, float, float>> enemiesAnimData;
-int flyIndex = 0;
-int glopIndex = 2;
-int snailIndex = 4;
-float enSize = 0.5f;
-//platform
-vector<Entity> platform;
-
-enum GameState { TITLE_SCREEN, GAME_STATE, GAME_OVER };
-GameState state;
-
-
 float lerp(float v0, float v1, float t) {
 	return (1.0 - t)*v0 + t*v1;
 }
@@ -201,11 +225,11 @@ public:
 			//each entity has its own animation time
 			animationElapsed += elapsed;
 			if (type == "player") {
-				
+				const Uint8 *keys = SDL_GetKeyboardState(NULL);
 				//only jump once
 				if (!jump) {
-					const Uint8 *keys = SDL_GetKeyboardState(NULL);
-					if (keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_SPACE]) {
+					//when jump allowed
+					if (keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_W]) {
 						if (collidedBottom == true) yVel = 4.0f;
 						jump = true;
 						
@@ -222,30 +246,39 @@ public:
 						animationElapsed = 0.0f;
 					}
 				}
-				//change sprite to jump one
+				
+				//change sprite to jump once
+				//while I am in the air 
+				//you can insta teleport back
 				else if (jump) {
 					float Swidth = 67.0f / 512.0f;
 					float Sheight = 94.0f / 512.0f;
 					aspect = Swidth / Sheight;
 					sprite = SheetSprite(ludioSheet, 438.0f / 512.0f,
 						93.0f / 512.0f, Swidth, Sheight, ludioSize, (Swidth*aspect), (Sheight*aspect));
-					yVel = lerp(yVel, 0.0f, elapsed*friction_y);
-
+				//	yVel = lerp(yVel, 0.0f, elapsed*friction_y);
+					//while I am in the air 
+					//you can insta teleport back
+					
 				}
-				yVel += acceleration_y * elapsed;
+				if (keys[SDL_SCANCODE_DOWN] || keys[SDL_SCANCODE_S]) {
+					y = -0.99f;
+					jump = false;
+				}
+				
+				yVel += elapsed * gravity;
 				if (y > 1.2f) {
-					yVel = -0.5f;
+					yVel = -0.1f; //no higher than this
 				}
 
 				y += yVel * elapsed;
 				collideWithGroundY();
-
-
+				
 				//THIS WORKS, COMMENTED OUT FOR NOW TO ADD TO GAME PLAY
 				//AD THIS BACK IN LATER TO LOSE GAME
-				/*for (Entity& e : enemies) {
+				for (Entity& e : enemiesToFight) {
 					collideWithEntity(e);
-				}*/
+				}
 			}
 			//enemies
 			else {
@@ -262,7 +295,6 @@ public:
 						flyIndex = (flyIndex + 1) % 2;
 						animationElapsed = 0.0f;
 					}
-					//check for "collision" off screen
 				}
 				//glop anim
 				if (type == "glop") {
@@ -279,10 +311,9 @@ public:
 					}
 					
 					//fall down to ground
-					yVel += acceleration_y * elapsed;
+					yVel += gravity * elapsed;
 					y += yVel *elapsed;
 					collideWithGroundY();
-					//check for "collision" off screen
 				}
 				if (type == "snail") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
@@ -295,10 +326,9 @@ public:
 						snailIndex = ((snailIndex + 1) % 2) + 4;
 						animationElapsed = 0.0f;
 					}
-					yVel += acceleration_y * elapsed;
+					yVel += gravity * elapsed;
 					y += yVel *elapsed;
 					collideWithGroundY();
-					//check for "collision" off screen
 				}
 				if (xVel <= 5.0f) {
 					xVel += acceleration_x * elapsed;
@@ -321,22 +351,22 @@ public:
 	}
 
 	//only will be called for between player and enemies
+	//smaller than normal hitbox cause....
 	void collideWithEntity(Entity& enem) {
 		//I collided with something to my right
 		//but it is did not fully pass me 
-		if (this->x + width / 2 > enem.x - enem.width / 2 &&
-			this->x-width/2 < enem.x - enem.width/2) {
-			if (this->y - height / 2 < enem.y + enem.height / 2 && this->y + height / 2 > enem.y - height / 2) {
-				stringstream ss;
-				ss << enem.type;
-				OutputDebugString(ss.str().c_str());
+		if (this->x + width / 3 > enem.x - enem.width / 3 &&
+			this->x < enem.x) {
+			if (this->y - height / 3 < enem.y + enem.height / 3 && this->y + height / 3 > enem.y - height / 3) {
+				
 				win = false; 
-				state = GAME_OVER;
+				state = GAME_OVER_DRAW_ONLY;
 			//	return true;
 			}
 		}
 	}
 
+	//collided with platform
 	void collideWithGroundY() {
 		//check with only 1st row 
 		//1st row all same so check any of the 15 y
@@ -345,23 +375,16 @@ public:
 				yVel = 0.0f;
 				acceleration_y = 0.0f;
 				pen_y = (platform[0].height/2 + platform[0].y-0.25) - (y-height/2);
-				stringstream ss;
-				ss << this->y - height / 2 << " " << platform[0].y + platform[0].height / 2 << " " <<pen_y << " ";
 				y += pen_y + 0.002;
-				ss << this->y - height / 2 << endl;
-				//OutputDebugString(ss.str().c_str());
 				jump = false;
 			}
 			else {
 				collidedBottom = false;
-				acceleration_y = -3.7;
+				//acceleration_y = -3.7;
 				pen_y = 0;
-			
-			}
-		
+			}	
 	}
-
-
+	
 	void draw(ShaderProgram *program) {
 		if (alive) {
 			modelMatrix.identity();
@@ -379,6 +402,7 @@ public:
 	float y;
 
 	float acceleration_y = 0.0f;
+	float gravity = -2.5f;
 	float acceleration_x = 0.0f;
 	
 	float friction_y = 0.5f;
@@ -428,7 +452,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float platAspect = platW / platH;
 	//top layer
 	float platformX = 3.5f;
-	float platformY = -1.0f;
+	float platformY = -1.2f;
 	for (int i = 0; i < 15; i++) {
 		Entity platformT  = Entity(platformX, platformY, 0.5*platSize*platAspect * 2, 0.5f*platSize * 2, "platformTop", 0.0f, 0.0f, true);
 		platformT.sprite = SheetSprite(platSheet, 144.0f / 1024.0f, 792.0f / 1024.0f, platW / 1024.0f, platH / 1024.0f, platSize, platW / 1024.0f, platH / 1024.0f);
@@ -455,7 +479,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float playerH = 92.0f;
 	float playerAspect = playerW / playerH;
 	float playerX = -2.0f;
-	float playerY = 0.0f;
+	float playerY = -0.20f;
 	player = Entity(playerX, playerY, 0.5*playerSize*playerAspect * 2.0f, 0.5f*playerSize*2.0f, "player", 0.0f, 0.0f, true);
 	player.sprite = SheetSprite(playerSheet, 67.0f / 512.0f, 196.0f / 512.0f, playerW / 512.0f, playerH / 512.0f, playerSize, playerW / 512.0f, playerH / 512.0f);
 	//enemies
@@ -467,8 +491,8 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float flyH = 36.0f; 
 	float flyAsp = flyW / flyH;
 	float flyX = 4.25f;
-	float flyY = 1.0f;
-	Entity fly = Entity(flyX, flyY, 0.5*flySize*flyAsp * 2, 0.5f*flySize * 2, "fly", 1.250f, 0.0f, true);
+	float flyY = 1.2f;
+	Entity fly = Entity(flyX, flyY, 0.5*flySize*flyAsp * 2, 0.5f*flySize * 2, "fly", 1.750f, 0.0f, true);
 	fly.sprite = SheetSprite(eSheets, 0.0f / 353.0f, 32.0f / 153.0f, flyW / 353.0f, flyH / 153.0f, flySize,(flyW*flyAsp*(153.0f/353.0f)),(flyH*flyAsp*(153.0f/353.0f))); //mult flysize by fly aspect and the spritesheet aspect
 	e.push_back(fly);
 	//glop walk 
@@ -477,7 +501,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float glopH = 28.0f;
 	float glopAsp = glopW / glopH;
 	float glopX = 4.25f;
-	float glopY = -0.50f;
+	float glopY = -0.70f;
 	Entity glop = Entity(glopX, glopY, 0.5*glopSize*glopAsp * 2, 0.5f*glopSize * 2, "glop", 2.1f, 0.0f, true);
 	glop.sprite = SheetSprite(eSheets, 52.0f / 353.0f, 125.0f / 153.0f, glopW / 353.0f, glopH / 153.f, glopSize, (glopW*glopAsp*(153.0f / 353.0f)), (glopH*glopAsp*(153.0f / 353.0f)));
 	e.push_back(glop);
@@ -487,32 +511,156 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 	float snailH = 31.0f;
 	float snailAsp = snailW / snailH;
 	float snailX = 4.25f;
-	float snailY = -0.50f;
-	Entity snail = Entity(snailX, snailY, 0.5*snailSize*snailAsp * 2, 0.5f*snailSize * 2, "snail", 1.0f, 0.0f, true);
+	float snailY = -0.70f;
+	Entity snail = Entity(snailX, snailY, 0.5*snailSize*snailAsp * 2, 0.5f*snailSize * 2, "snail", 1.50f, 0.0f, true);
 	snail.sprite = SheetSprite(eSheets, 143.0f / 353.0f, 34.0f / 153.0f, snailW / 353.0f, snailH / 153.f, snailSize, (snailW*snailAsp*(153.0f / 353.0f)), (snailH*snailAsp*(153.0f / 353.0f)));
 	e.push_back(snail);
 }
 
 //render the new enemies
-void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow) {
-	int spawnPick = rand() % 3; //range: 0 to 2
-	if (spawnPick == 0 && score > 500) { //fly
-		enemiesShow.push_back(list[0]);
-	}
-	else if (spawnPick == 1 && score > 750) { //glop
-		enemiesShow.push_back(list[1]);
-	}
-	else if (spawnPick == 2) { //snail
+void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup) {
+	stringstream ss;
+	int spawnPick = rand() % 30; //range: 0 to 29
+	if (spawnPick < 10) { //snail
 		enemiesShow.push_back(list[2]);
+		ss << "snail ";
+		if (holdup) {
+			enemiesShow.back().x += (enemiesShow.back().width * 2);
+		}
 	}
+	else if (spawnPick < 20 && score > 650) { //glop
+		enemiesShow.push_back(list[1]);
+		ss << "glop ";
+		if (holdup) {
+			enemiesShow.back().x += (enemiesShow.back().width * 2);
+		}
+	}
+	else if (spawnPick < 30 && score > 400) { //fly
+		enemiesShow.push_back(list[0]);
+		ss << "fly ";
+		if (holdup) {
+			enemiesShow.back().x += (enemiesShow.back().width * 2);
+		}
+	}
+	
+	OutputDebugString(ss.str().c_str());
 }
 
+//PURGE
 void purge() {
 	enemiesToFight.erase(
 		std::remove_if(enemiesToFight.begin(), enemiesToFight.end(), [](Entity& p) {return !p.alive;}
 			),
 		enemiesToFight.end()
 		);
+}
+
+//draw the moving background
+void drawBG(ShaderProgram* program, GLuint img, Matrix modelMatrix, float offSet) {
+	glBindTexture(GL_TEXTURE_2D, img);
+	float vertices[] = /*{ -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };*/{ -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };//{ -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
+	glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+	glEnableVertexAttribArray(program->positionAttribute);
+	//show all of image
+	float textCoords[] = { 0.0 + offSet, 1.0,
+						   1.0 + offSet, 1.0,
+						   1.0 + offSet, 0.0,
+						   0.0 + offSet, 1.0,
+						   1.0 + offSet, 0.0,
+						   0.0 + offSet, 0.0};
+	//float textCoords[] = { 0.0, 1.0, 2.0, 1.0, 2.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 0.0 };
+	glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, textCoords);
+	glEnableVertexAttribArray(program->texCoordAttribute);
+	program->setModelMatrix(modelMatrix);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisableVertexAttribArray(program->positionAttribute);
+	glDisableVertexAttribArray(program->texCoordAttribute);
+}
+
+//update moving alive entities
+void updateAll(float elapsed, Entity& ludio) {
+	//update
+	ludio.update(elapsed);
+	for (Entity& e1 : enemiesToFight) {
+		e1.update(elapsed);
+	}
+}
+
+
+//this time for real
+//took main update stuff and dropped it here
+void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow, Entity& ludio) {
+	scoreElapsed += elapsed;
+	if (scoreElapsed > 1.0f / 10.0f) {
+		score++;
+		scoreElapsed = 0.0f;
+	}
+
+	//procedurally generated enemies
+	//kind of.....
+	//render enemy function
+	renderEnemyNow += elapsed;
+	if (renderEnemyNow > 2.0f) {
+		renderEnemy(enemiesBasis, enemiesToFight, false);
+		//80% chance of rendering extra enemy every 2 secs
+		if (score > 700 && rand() % 10 < 8) {
+			renderEnemy(enemiesBasis, enemiesToFight, true);
+		}
+		//50% chance of rendering extra enemy every 2 secs
+		else if (score > 350 && rand() % 10 < 5) {
+			renderEnemy(enemiesBasis, enemiesToFight, true);
+		}
+		renderEnemyNow = 0.0f;
+	}
+
+	//update
+	updateAll(elapsed, ludio);
+}
+
+//draw everything
+void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint background, GLuint font, ShaderProgram* program, Entity& ludio) {
+	//draw
+	//background first
+	bgOffSet += 1.0f / 32.0f * elapsed;
+	modelMatrix.identity();
+	modelMatrix.Scale(3.75f, 2.0f, 1.0f);
+	drawBG(program, background, modelMatrix, bgOffSet);
+	//entities
+	for (Entity& pl : platform) {
+		pl.draw(program);
+	}
+	ludio.draw(program);
+
+	for (Entity& e1 : enemiesToFight) {
+		e1.draw(program);
+	}
+	//score 
+	modelMatrix.identity();
+	modelMatrix.Translate(-1.0f, -1.50f, 0.0f);
+	program->setModelMatrix(modelMatrix);
+	stringstream finalScore;
+	finalScore << "Score:" << score;
+	DrawText(program, font, finalScore.str(), 0.350f, 0.0f);
+}
+
+//soft reset
+void reset(Entity& ludio, GLuint playerSheet) {
+	win = false;
+	score = 0.0f;
+	
+	float playerSize = 1.0;
+	float playerW = 66.0f;
+	float playerH = 92.0f;
+	float playerAspect = playerW / playerH;
+	float playerX = -2.0f;
+	float playerY = -0.20f;
+	ludio = Entity(playerX, playerY, 0.5*playerSize*playerAspect * 2.0f, 0.5f*playerSize*2.0f, "player", 0.0f, 0.0f, true);
+	ludio.sprite = SheetSprite(playerSheet, 67.0f / 512.0f, 196.0f / 512.0f, playerW / 512.0f, playerH / 512.0f, playerSize, playerW / 512.0f, playerH / 512.0f);
+
+	for (Entity& e : enemiesToFight) {
+		e.alive = false;
+	}
+	purge();
 }
 
 int main(int argc, char *argv[])
@@ -524,9 +672,20 @@ int main(int argc, char *argv[])
 	#ifdef _WINDOWS
 		glewInit();
 	#endif
-		
+
+		Entity ludio; //player
+				
+		//for the background snow platform
+		GLuint platformSheet = LoadTexture("tiles_spritesheet.png");
+		//the rest
 		//font
-		GLuint font = LoadTexture("font1.png");
+		GLuint font = LoadTextureLinear("font1.png");
+		//for the player animations
+		ludioSheet = LoadTextureLinear("p1_spritesheet.png");
+		//for enemies
+		enemiesSheet = LoadTextureLinear("enemies_spritesheet.png");
+
+		GLuint background = LoadTexture("bg_grasslands.png");
 				
 		//for player animations
 		ludioMovesData.push_back(tuple<float, float, float, float>(0, 0, 72, 97));
@@ -551,21 +710,10 @@ int main(int argc, char *argv[])
 		enemiesAnimData.push_back(tuple<float, float, float, float>(0, 125, 51, 26));
 		enemiesAnimData.push_back(tuple<float, float, float, float>(143, 34, 54, 31));
 		enemiesAnimData.push_back(tuple<float, float, float, float>(67, 87, 57, 31));
-		//for the background snow platform
-		GLuint platformSheet = LoadTexture("tiles_spritesheet.png");
-		//for the player animations
-		ludioSheet = LoadTexture("p1_spritesheet.png");
-		//for enemies
-		enemiesSheet = LoadTexture("enemies_spritesheet.png");
-
-		Entity ludio; //player
-		
-		//vector<Entity> enemies; //enemies
-		
+				
 		//setUp
 		setUp(platform,platformSheet, ludio, ludioSheet, enemiesBasis, enemiesSheet);
 
-		
 		state = TITLE_SCREEN;
 		win = false;
 
@@ -582,13 +730,17 @@ int main(int argc, char *argv[])
 		float lastTick = 0.0f;
 		float scoreElapsed = 0.0f;
 		float renderEnemyNow = 0.0f;
+
+		float bgOffSet = 0.0f;
 	SDL_Event event;
 	bool done = false;
 	while (!done) {
 		float ticks = (float)SDL_GetTicks() / 1000.0f;
 		float elapsed = ticks - lastTick;
 		lastTick = ticks;
-		
+
+		float fixedElapsed = elapsed;
+
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
 				done = true;
@@ -599,18 +751,17 @@ int main(int argc, char *argv[])
 					if (state == TITLE_SCREEN) {
 						state = GAME_STATE;						
 					}
+					if (state == GAME_STATE) {
+						//spam
+						//MORE TESTING NEEDS TO BE DONE WITH THE VALUE
+						ludio.yVel += 0.40f;
+					}
 				}
 				//restart 
-				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == GAME_OVER) {
+				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == GAME_OVER_DRAW_ONLY) {
 					state = TITLE_SCREEN;
 					//reset everything
-					win = false;
-					
-					setUp(platform, platformSheet, ludio, ludioSheet, enemiesBasis, enemiesSheet);
-					for (Entity& e : enemiesToFight) {
-						e.alive = false;
-					}
-					purge();
+					reset(ludio, ludioSheet);
 				}
 
 			}
@@ -620,14 +771,14 @@ int main(int argc, char *argv[])
 		const Uint8 *keys = SDL_GetKeyboardState(NULL);
 		float vertices[] = { -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };
 		float textCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
-		stringstream sss;
+
 		switch (state) {
 			case TITLE_SCREEN:
 				//Title
 				modelMatrix.identity();
-				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
+				modelMatrix.Translate(-3.20f, 1.5f, 0.0f);
 				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Space Inavders", 0.25f, 0);
+				DrawText(&program, font, "Lets Go For A Walk", 0.37f, 0.0f);
 				//Instructions
 				modelMatrix.identity();
 				modelMatrix.Translate(-3.0f, 1.0f, 0.0f);
@@ -636,45 +787,46 @@ int main(int argc, char *argv[])
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.75f, 0.75f, 0.0f);
 				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Arrow keys to move", 0.25f, 0);
+				DrawText(&program, font, "W/Up to Jump", 0.25f, 0);
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
 				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Space to shoot", 0.25f, 0);
+				DrawText(&program, font, "S/Down to drop", 0.25f, 0);
+				modelMatrix.identity();
+				modelMatrix.Translate(-2.750f, 0.25f, 0.0f);
+				program.setModelMatrix(modelMatrix);
+				DrawText(&program, font, "Space to slow fall", 0.25f, 0);
+
 				//Game On
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				DrawText(&program, font, "Press Space to Play", 0.25f, 0);
+				
 			break;
 
 			//play
 			case GAME_STATE:
-				scoreElapsed += elapsed;
-				if (scoreElapsed > 1.0f / 60.0f) {
-					score++;
-					scoreElapsed = 0.0f;
+
+				//fixed updating
+				if (fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
+					fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
 				}
-				/*
-				sss << score << " ";
-				OutputDebugString(sss.str().c_str());*/
-				//procedurally generated enemies
-				//kind of.....
-				//render enemy function
-				renderEnemyNow += elapsed;
-				if (renderEnemyNow > 2.0f) {
-					renderEnemy(enemiesBasis, enemiesToFight);
-					renderEnemyNow = 0.0f;
+				while (fixedElapsed >= FIXED_TIMESTEP) {
+					fixedElapsed -= FIXED_TIMESTEP;
+					updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio);
 				}
-				/*sss << renderEnemyNow << " ";
-				OutputDebugString(sss.str().c_str());
-*/
-				
-				//update
-				ludio.update(elapsed);
-				for (Entity& e1 : enemiesToFight) {
-					e1.update(elapsed);
+				updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio);
+				//draw
+				drawAll(bgOffSet, modelMatrix, fixedElapsed, background, font, &program, ludio);
+				//PURGE...
+				if (enemiesToFight.size() != 0) {
+					purge();
 				}
+				break;
+
+			//lost, but see how you lost
+			case GAME_OVER_DRAW_ONLY:
 				//draw
 				for (Entity& pl : platform) {
 					pl.draw(&program);
@@ -688,26 +840,47 @@ int main(int argc, char *argv[])
 				if (enemiesToFight.size() != 0) {
 					purge();
 				}
-				break;
-
-			case GAME_OVER:
+				//Game over text
 				modelMatrix.identity();
-				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
+				modelMatrix.Translate(-3.20f, 1.5f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				string toWrite = "";
 				//Did the player win, did the player lose
+				toWrite = "Game Set Match";
+				DrawText(&program, font, toWrite, 0.37f, 0.0f);
+				modelMatrix.identity();
+				modelMatrix.Translate(-2.5f, 0.750f, 0.0f);
+				program.setModelMatrix(modelMatrix);
+				stringstream finalScore;
+				finalScore << "Score:" << score;
+				DrawText(&program, font, finalScore.str(), 0.350f, 0.0f);
+				modelMatrix.identity();
+				modelMatrix.Translate(-2.5f, 0.25f, 0.0f);
+				program.setModelMatrix(modelMatrix);
+				DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
+				
+				break;
+
+/*			case GAME_OVER:
+				modelMatrix.identity();
+				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
+				program.setModelMatrix(modelMatrix);
+				//string toWrite = "";
+				//Did the player win, did the player lose
 				if (win) {
-					toWrite = "YOU WIN";
+//					toWrite = "YOU WIN";
 				}
 				else {
-					toWrite = "YOU LOSE";
+	//				toWrite = "YOU LOSE";
 				}
 				DrawText(&program, font, toWrite, 0.5f, 0.0f);
 				modelMatrix.identity();
 				modelMatrix.Translate(-2.5f, 0.0f, 0.0f);
 				program.setModelMatrix(modelMatrix);
 				DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
-		}
+				break;
+	*/	
+				}
 
 		program.setProjectionMatrix(projectionMatrix);
 		program.setViewMatrix(viewMatrix);
