@@ -1,0 +1,17 @@
+﻿Build started 4/30/2017 2:21:31 AM.
+     1>Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\NYUCodebase\NYUCodebase.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /IC:\SDL2\include /IC:\SDL2_image\include /IC:\glew\include /IC:\SDL2_mixer\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _WINDOWS /D _MBCS /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\anim logo\nyucodebase\main.cpp(67): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\anim logo\nyucodebase\main.cpp(120): warning C4305: 'argument' : truncation from 'double' to 'float'
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\Debug\NYUCodebase.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\SDL2_mixer\lib\x86 /LIBPATH:C:\SDL2\lib\x86 /LIBPATH:C:\SDL2_image\lib\x86 /LIBPATH:C:\glew\lib\Release\Win32 SDL2.lib SDL2_mixer.lib glew32.lib SDL2main.lib SDL2_image.lib OpenGL32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\Debug\NYUCodebase.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\Debug\NYUCodebase.lib" /MACHINE:X86 Debug\main.obj
+         Debug\Matrix.obj
+         Debug\ShaderProgram.obj
+         NYUCodebase.vcxproj -> C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\Debug\NYUCodebase.exe
+     1>Done Building Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Anim Logo\NYUCodebase\NYUCodebase.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:01.54

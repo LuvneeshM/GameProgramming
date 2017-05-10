@@ -18,7 +18,7 @@
 #include <fstream>
 #include <algorithm>
 
-#include <Windows.h>
+//#include <Windows.h>
 #include <tuple>
 
 using namespace std;
@@ -41,11 +41,14 @@ float score = 00.0;
 
 //for player
 GLuint ludioSheet;
-
+float ludioY = 0;
 //player animations
 int ludioIndex = 0;
 float ludioSize = 1.0f;
 vector<tuple<float, float, float, float>> ludioMovesData;
+//make the game hard
+int jumps_left = 5;
+
 
 //for enemies
 vector<Entity> enemiesBasis; //enemies starter 
@@ -59,9 +62,8 @@ float enSize = 0.5f;
 //platform
 vector<Entity> platform;
 
-enum GameState { TITLE_SCREEN, GAME_STATE, GAME_OVER, GAME_OVER_DRAW_ONLY };
+enum GameState { TITLE_SCREEN, GAME_STATE, PAUSE, GAME_OVER_DRAW_ONLY };
 GameState state;
-
 
 GLuint LoadTexture(const char *filePath) {
 	int w, h, comp;
@@ -229,16 +231,21 @@ public:
 				//only jump once
 				if (!jump) {
 					//when jump allowed
-					if (keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_W]) {
-						if (collidedBottom == true) yVel = 4.0f;
+					//when jumps_left != 0
+					if ((keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_W]) && (jumps_left != 0)) {
+						if (collidedBottom == true) {
+							yVel = 4.0f;
+							if (jumps_left > 0) {
+								jumps_left -= 1;
+							}
+						}
 						jump = true;
-						
 					}
 					//animate walking man
 					if (animationElapsed > 1.0f / framesPerSecond) 
 					{
 						float Swidth = get<2>(ludioMovesData[ludioIndex]);
-						float Sheight = get<3>(ludioMovesData[ludioIndex]) ;
+						float Sheight = get<3>(ludioMovesData[ludioIndex]);
 						aspect = Swidth / Sheight;
 						sprite = SheetSprite(ludioSheet, get<0>(ludioMovesData[ludioIndex]) / 512.0f,
 							get<1>(ludioMovesData[ludioIndex]) / 512.0f, Swidth / 512.0f, Sheight / 512.0f, ludioSize, (Swidth*aspect), (Sheight*aspect));
@@ -282,11 +289,10 @@ public:
 			}
 			//enemies
 			else {
-
 				//fly enemies
 				if (type == "fly") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
-						float Swidth = get<2>(enemiesAnimData[flyIndex]) ;
+						float Swidth = get<2>(enemiesAnimData[flyIndex]);
 						float Sheight = get<3>(enemiesAnimData[flyIndex]);
 						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[flyIndex]) / 353.0f,
@@ -295,11 +301,18 @@ public:
 						flyIndex = (flyIndex + 1) % 2;
 						animationElapsed = 0.0f;
 					}
+					//fly move towards ludio's y position
+					//just at a really slow rate
+					float offsetToPlayer = y - ludioY;
+					y -= offsetToPlayer * 0.1 * elapsed;
+					stringstream flyMan;
+					flyMan << "y: " << y << " offsetToPlayer " <<offsetToPlayer<<" ludioy " << ludioY <<endl;
+					//OutputDebugString(flyMan.str().c_str());
 				}
 				//glop anim
 				if (type == "glop") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
-						float Swidth = get<2>(enemiesAnimData[glopIndex]) ;
+						float Swidth = get<2>(enemiesAnimData[glopIndex]);
 						float Sheight = get<3>(enemiesAnimData[glopIndex]);
 						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[glopIndex]) / 353.0f,
@@ -307,7 +320,6 @@ public:
 							Sheight / 153.0f, enSize, (Swidth*aspect*(153.0f / 353.0f)), (Sheight*aspect*(153.0f / 353.0f)));
 						animationElapsed = 0.0f;
 						glopIndex = ((glopIndex + 1) % 2) + 2;
-						
 					}
 					
 					//fall down to ground
@@ -317,8 +329,8 @@ public:
 				}
 				if (type == "snail") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
-						float Swidth = get<2>(enemiesAnimData[snailIndex]) ;
-						float Sheight = get<3>(enemiesAnimData[snailIndex]) ;
+						float Swidth = get<2>(enemiesAnimData[snailIndex]);
+						float Sheight = get<3>(enemiesAnimData[snailIndex]);
 						aspect = Swidth / Sheight;
 						sprite = SheetSprite(enemiesSheet, get<0>(enemiesAnimData[snailIndex]) / 353.0f,
 							get<1>(enemiesAnimData[snailIndex]) / 153.0f, Swidth / 353.0f,
@@ -378,6 +390,7 @@ public:
 				y += pen_y + 0.002;
 				jump = false;
 			}
+
 			else {
 				collidedBottom = false;
 				//acceleration_y = -3.7;
@@ -437,7 +450,7 @@ public:
 		ostringstream ss;
 		ss << this->type << " stats: centerX " << x << " centerY " << y << " width " << width << " height " << height
 			<< " speedX " << xVel << " speedY" << yVel;
-		OutputDebugString(ss.str().c_str());
+		//OutputDebugString(ss.str().c_str());
 	}
 }; //end entity
 
@@ -528,14 +541,14 @@ void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup)
 			enemiesShow.back().x += (enemiesShow.back().width * 2);
 		}
 	}
-	else if (spawnPick < 20 && score > 650) { //glop
+	else if (spawnPick < 20 && score > 400) { //glop
 		enemiesShow.push_back(list[1]);
 		ss << "glop ";
 		if (holdup) {
 			enemiesShow.back().x += (enemiesShow.back().width * 2);
 		}
 	}
-	else if (spawnPick < 30 && score > 400) { //fly
+	else if (spawnPick < 30 && score > 100) { //fly
 		enemiesShow.push_back(list[0]);
 		ss << "fly ";
 		if (holdup) {
@@ -543,7 +556,7 @@ void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup)
 		}
 	}
 	
-	OutputDebugString(ss.str().c_str());
+	//OutputDebugString(ss.str().c_str());
 }
 
 //PURGE
@@ -577,10 +590,34 @@ void drawBG(ShaderProgram* program, GLuint img, Matrix modelMatrix, float offSet
 	glDisableVertexAttribArray(program->texCoordAttribute);
 }
 
+//draw jumps left
+void drawJumpIcon(ShaderProgram* program, GLuint img, Matrix modelMatrix) {
+	glBindTexture(GL_TEXTURE_2D, img);
+	float vertices[] = { -0.1, -0.1, 0.1, -0.1, 0.1, 0.1, -0.1, -0.1, 0.1, 0.1, -0.1, 0.1 };//{ -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };//{ -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
+	glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+	glEnableVertexAttribArray(program->positionAttribute);
+	//show all of image
+	float textCoords[] = { 0.0, 1.0,
+		1.0, 1.0,
+		1.0, 0.0,
+		0.0, 1.0,
+		1.0, 0.0,
+		0.0, 0.0 };
+	//float textCoords[] = { 0.0, 1.0, 2.0, 1.0, 2.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 0.0 };
+	glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, textCoords);
+	glEnableVertexAttribArray(program->texCoordAttribute);
+	program->setModelMatrix(modelMatrix);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisableVertexAttribArray(program->positionAttribute);
+	glDisableVertexAttribArray(program->texCoordAttribute);
+}
+
+
 //update moving alive entities
 void updateAll(float elapsed, Entity& ludio) {
 	//update
 	ludio.update(elapsed);
+	ludioY = ludio.y;
 	for (Entity& e1 : enemiesToFight) {
 		e1.update(elapsed);
 	}
@@ -589,7 +626,7 @@ void updateAll(float elapsed, Entity& ludio) {
 
 //this time for real
 //took main update stuff and dropped it here
-void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow, Entity& ludio) {
+void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow, Entity& ludio, float& recoverJump) {
 	scoreElapsed += elapsed;
 	if (scoreElapsed > 1.0f / 10.0f) {
 		score++;
@@ -613,12 +650,21 @@ void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow,
 		renderEnemyNow = 0.0f;
 	}
 
+	//can I recover my jump now??
+	recoverJump += elapsed;
+	if (recoverJump > 5.0f) {
+		if (jumps_left < 6) {
+			jumps_left++;
+		}
+		recoverJump = 0.0f;
+	}
+
 	//update
 	updateAll(elapsed, ludio);
 }
 
 //draw everything
-void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint background, GLuint font, ShaderProgram* program, Entity& ludio) {
+void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint background, GLuint font, ShaderProgram* program, Entity& ludio, GLuint jumpIcon) {
 	//draw
 	//background first
 	bgOffSet += 1.0f / 32.0f * elapsed;
@@ -626,21 +672,39 @@ void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint backgro
 	modelMatrix.Scale(3.75f, 2.0f, 1.0f);
 	drawBG(program, background, modelMatrix, bgOffSet);
 	//entities
+	//ludio is drawn
 	for (Entity& pl : platform) {
 		pl.draw(program);
 	}
 	ludio.draw(program);
-
+	//render the enemies
 	for (Entity& e1 : enemiesToFight) {
 		e1.draw(program);
 	}
 	//score 
 	modelMatrix.identity();
-	modelMatrix.Translate(-1.0f, -1.50f, 0.0f);
+	modelMatrix.Translate(0.50f, -1.50f, 0.0f);
 	program->setModelMatrix(modelMatrix);
 	stringstream finalScore;
 	finalScore << "Score:" << score;
-	DrawText(program, font, finalScore.str(), 0.350f, 0.0f);
+	DrawText(program, font, finalScore.str(), 0.350f, -0.10f);
+	//number of jumps
+	modelMatrix.identity();
+	modelMatrix.Translate(-3.0f, -1.5f, 0.0f);
+	program->setModelMatrix(modelMatrix);
+	stringstream num_of_jumps;
+	num_of_jumps << "Jumps Remaining";
+	DrawText(program, font, num_of_jumps.str(), 0.350f, -.15f);
+	float xJumpIconOffset = -2.5f;
+	for (int i = 0; i < jumps_left; i++) {
+		modelMatrix.identity();
+		modelMatrix.Translate(xJumpIconOffset, -1.8f, 0);
+		xJumpIconOffset += 0.25f;
+		program->setModelMatrix(modelMatrix);
+		//thanks for the jump icon Henry Zhou
+		drawJumpIcon(program, jumpIcon, modelMatrix);
+	}
+
 }
 
 //soft reset
@@ -666,7 +730,7 @@ void reset(Entity& ludio, GLuint playerSheet) {
 int main(int argc, char *argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
-	displayWindow = SDL_CreateWindow("Invaders of Space", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 360, SDL_WINDOW_OPENGL);
+	displayWindow = SDL_CreateWindow("Let's Go For A Walk", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 360, SDL_WINDOW_OPENGL);
 	SDL_GLContext context = SDL_GL_CreateContext(displayWindow);
 	SDL_GL_MakeCurrent(displayWindow, context);
 	#ifdef _WINDOWS
@@ -686,19 +750,21 @@ int main(int argc, char *argv[])
 		enemiesSheet = LoadTextureLinear("enemies_spritesheet.png");
 
 		GLuint background = LoadTexture("bg_grasslands.png");
+
+		GLuint jumpIcon = LoadTexture("up.png");
 				
 		//for player animations
 		ludioMovesData.push_back(tuple<float, float, float, float>(0, 0, 72, 97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(73,0,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(146, 0, 72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(0,98,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(73,98,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(146,98,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(219,0,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(292,0,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(219,97,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(365,0,72,97));
-		ludioMovesData.push_back(tuple<float, float, float, float>(292,98,72,97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(73, 0, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(146, 0, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(0, 98, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(73, 98, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(146, 98, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(219, 0, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(292, 0, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(219, 97, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(365, 0, 72, 97));
+		ludioMovesData.push_back(tuple<float, float, float, float>(292, 98, 72, 97));
 
 		//for enemy animations
 		//fly 2 
@@ -730,8 +796,10 @@ int main(int argc, char *argv[])
 		float lastTick = 0.0f;
 		float scoreElapsed = 0.0f;
 		float renderEnemyNow = 0.0f;
-
+		float recoverJump = 0.0f;
 		float bgOffSet = 0.0f;
+
+
 	SDL_Event event;
 	bool done = false;
 	while (!done) {
@@ -754,16 +822,28 @@ int main(int argc, char *argv[])
 					if (state == GAME_STATE) {
 						//spam
 						//MORE TESTING NEEDS TO BE DONE WITH THE VALUE
-						ludio.yVel += 0.40f;
+						ludio.yVel += -0.145*ludio.gravity;
 					}
 				}
 				//restart 
 				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == GAME_OVER_DRAW_ONLY) {
 					state = TITLE_SCREEN;
 					//reset everything
+					jumps_left = 5;
 					reset(ludio, ludioSheet);
 				}
-
+				//pause
+				if (event.key.keysym.scancode == SDL_SCANCODE_P && state == GAME_STATE) {
+					state = PAUSE;
+				}
+				//paused - rage quit
+				if (event.key.keysym.scancode == SDL_SCANCODE_Q && state == PAUSE) {
+					done = true;
+				}
+				//oaused - resume
+				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == PAUSE) {
+					state = GAME_STATE;
+				}
 			}
 		}
 
@@ -773,114 +853,135 @@ int main(int argc, char *argv[])
 		float textCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
 
 		switch (state) {
-			case TITLE_SCREEN:
-				//Title
-				modelMatrix.identity();
-				modelMatrix.Translate(-3.20f, 1.5f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Lets Go For A Walk", 0.37f, 0.0f);
-				//Instructions
-				modelMatrix.identity();
-				modelMatrix.Translate(-3.0f, 1.0f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Instructions:", 0.25f, 0);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.75f, 0.75f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "W/Up to Jump", 0.25f, 0);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "S/Down to drop", 0.25f, 0);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.750f, 0.25f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Space to slow fall", 0.25f, 0);
-
-				//Game On
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Press Space to Play", 0.25f, 0);
-				
-			break;
+		case TITLE_SCREEN: 
+		{
+			//Title
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.0f, 1.5f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "Lets Go For A Walk", 0.37f, -0.15f);
+			//Instructions
+			modelMatrix.identity();
+			modelMatrix.Translate(-3.0f, 1.0f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "Instructions:", 0.25f, -0.10f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.75f, 0.75f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "W/Up to Jump", 0.25f, -0.10f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.75f, 0.50f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "S/Down to drop", 0.25f, -0.10f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.750f, 0.25f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "Space to float", 0.25f, -0.10);
+			//pause
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.750f, 0.0f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "P to pause", 0.25f, -0.10f);
+			//Game On
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "Press Space to Play", 0.25f, -0.10f);
+		}break;
 
 			//play
-			case GAME_STATE:
+		case GAME_STATE:
+		{
+			//fixed updating
+			if (fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
+				fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
+			}
+			while (fixedElapsed >= FIXED_TIMESTEP) {
+				fixedElapsed -= FIXED_TIMESTEP;
+				updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio, recoverJump);
+			}
+			updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio, recoverJump);
+			//draw
+			drawAll(bgOffSet, modelMatrix, fixedElapsed, background, font, &program, ludio, jumpIcon);
 
-				//fixed updating
-				if (fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
-					fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
-				}
-				while (fixedElapsed >= FIXED_TIMESTEP) {
-					fixedElapsed -= FIXED_TIMESTEP;
-					updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio);
-				}
-				updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio);
-				//draw
-				drawAll(bgOffSet, modelMatrix, fixedElapsed, background, font, &program, ludio);
-				//PURGE...
-				if (enemiesToFight.size() != 0) {
-					purge();
-				}
-				break;
+			//PURGE...
+			if (enemiesToFight.size() != 0) {
+				purge();
+			}
+		}break;
 
-			//lost, but see how you lost
-			case GAME_OVER_DRAW_ONLY:
-				//draw
-				for (Entity& pl : platform) {
-					pl.draw(&program);
-				}
-				ludio.draw(&program);
+		case PAUSE:
+		{
+			//draw
+			for (Entity& pl : platform) {
+				pl.draw(&program);
+			}
+			ludio.draw(&program);
 
-				for (Entity& e1 : enemiesToFight) {
-					e1.draw(&program);
-				}
-				//purge...
-				if (enemiesToFight.size() != 0) {
-					purge();
-				}
-				//Game over text
-				modelMatrix.identity();
-				modelMatrix.Translate(-3.20f, 1.5f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				string toWrite = "";
-				//Did the player win, did the player lose
-				toWrite = "Game Set Match";
-				DrawText(&program, font, toWrite, 0.37f, 0.0f);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.5f, 0.750f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				stringstream finalScore;
-				finalScore << "Score:" << score;
-				DrawText(&program, font, finalScore.str(), 0.350f, 0.0f);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.5f, 0.25f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
-				
-				break;
+			for (Entity& e1 : enemiesToFight) {
+				e1.draw(&program);
+			}
+			//purge...
+			if (enemiesToFight.size() != 0) {
+				purge();
+			}
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.0f, 1.5f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			string pWrite = "";
+			//Did the player win, did the player lose
+			pWrite = "PAUSED";
+			DrawText(&program, font, pWrite, 0.37f, 0.0f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-3.20f, 1.25f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			//Did the player win, did the player lose
+			pWrite = "R to resume";
+			DrawText(&program, font, pWrite, 0.3f, 0.0f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-3.20f, 1.00f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			//Did the player win, did the player lose
+			pWrite = "Q to exit";
+			DrawText(&program, font, pWrite, 0.3f, 0.0f);
+		}break;
 
-/*			case GAME_OVER:
-				modelMatrix.identity();
-				modelMatrix.Translate(-1.75f, 1.5f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				//string toWrite = "";
-				//Did the player win, did the player lose
-				if (win) {
-//					toWrite = "YOU WIN";
-				}
-				else {
-	//				toWrite = "YOU LOSE";
-				}
-				DrawText(&program, font, toWrite, 0.5f, 0.0f);
-				modelMatrix.identity();
-				modelMatrix.Translate(-2.5f, 0.0f, 0.0f);
-				program.setModelMatrix(modelMatrix);
-				DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
-				break;
-	*/	
-				}
+		//lost, but see how you lost
+		case GAME_OVER_DRAW_ONLY: 
+		{
+			//draw
+			for (Entity& pl : platform) {
+				pl.draw(&program);
+			}
+			ludio.draw(&program);
+
+			for (Entity& e1 : enemiesToFight) {
+				e1.draw(&program);
+			}
+			//purge...
+			if (enemiesToFight.size() != 0) {
+				purge();
+			}
+			//Game over text
+			modelMatrix.identity();
+			modelMatrix.Translate(-3.20f, 1.5f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			string toWrite = "";
+			//Did the player win, did the player lose
+			toWrite = "Which way is home?";
+			DrawText(&program, font, toWrite, 0.37f, 0.0f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.5f, 0.750f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			stringstream finalScore;
+			finalScore << "Score:" << score;
+			DrawText(&program, font, finalScore.str(), 0.350f, 0.0f);
+			modelMatrix.identity();
+			modelMatrix.Translate(-2.5f, 0.25f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			DrawText(&program, font, "Press R to Play Again", 0.25f, 0.0f);
+		}break;
+	}
 
 		program.setProjectionMatrix(projectionMatrix);
 		program.setViewMatrix(viewMatrix);
