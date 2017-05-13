@@ -18,8 +18,10 @@
 #include <fstream>
 #include <algorithm>
 
-//#include <Windows.h>
+#include <Windows.h>
 #include <tuple>
+
+#include <SDL_mixer.h>
 
 using namespace std;
 
@@ -36,8 +38,11 @@ SDL_Window* displayWindow;
 
 class Entity;
 
+//is player playing still
 bool win = false;
+//the current score
 float score = 00.0;
+bool drawHighScore = false;
 
 //for player
 GLuint ludioSheet;
@@ -48,7 +53,6 @@ float ludioSize = 1.0f;
 vector<tuple<float, float, float, float>> ludioMovesData;
 //make the game hard
 int jumps_left = 5;
-
 
 //for enemies
 vector<Entity> enemiesBasis; //enemies starter 
@@ -65,6 +69,14 @@ vector<Entity> platform;
 enum GameState { TITLE_SCREEN, GAME_STATE, PAUSE, GAME_OVER_DRAW_ONLY };
 GameState state;
 
+//sound effects
+//jump
+Mix_Chunk *jumpSound;
+Mix_Chunk *floatSound;
+Mix_Chunk *gameOverSound;
+Mix_Chunk *highScoreSound;
+Mix_Music *musicMusic;
+
 GLuint LoadTexture(const char *filePath) {
 	int w, h, comp;
 	unsigned char* image = stbi_load(filePath, &w, &h, &comp, STBI_rgb_alpha);
@@ -76,8 +88,12 @@ GLuint LoadTexture(const char *filePath) {
 	glGenTextures(1, &retTexture);
 	glBindTexture(GL_TEXTURE_2D, retTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	//THIS GOT RID OF MY LINE ISSUE
+	//USING GL_NEAREST FOR RENDERING THE TILES 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//also for the background
+	//using GL_Repeat allowed for me to wrap around with my uv coords
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	stbi_image_free(image);
@@ -229,13 +245,16 @@ public:
 			if (type == "player") {
 				const Uint8 *keys = SDL_GetKeyboardState(NULL);
 				//only jump once
+				//aka no double jump
 				if (!jump) {
 					//when jump allowed
 					//when jumps_left != 0
 					if ((keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_W]) && (jumps_left != 0)) {
 						if (collidedBottom == true) {
 							yVel = 4.0f;
+							//limited # of jumps
 							if (jumps_left > 0) {
+								Mix_PlayChannel(-1, jumpSound, 0);
 								jumps_left -= 1;
 							}
 						}
@@ -263,22 +282,28 @@ public:
 					aspect = Swidth / Sheight;
 					sprite = SheetSprite(ludioSheet, 438.0f / 512.0f,
 						93.0f / 512.0f, Swidth, Sheight, ludioSize, (Swidth*aspect), (Sheight*aspect));
-				//	yVel = lerp(yVel, 0.0f, elapsed*friction_y);
-					//while I am in the air 
-					//you can insta teleport back
-					
+					//slowly drop the player velocity cause air friction....and gravity too
+					//adding this in makes spamming even harder....
+					yVel = lerp(yVel, 0.0f, elapsed*friction_y);					
 				}
+				//while I am in the air 
+				//you can insta teleport back
 				if (keys[SDL_SCANCODE_DOWN] || keys[SDL_SCANCODE_S]) {
 					y = -0.99f;
 					jump = false;
 				}
 				
 				yVel += elapsed * gravity;
-				if (y > 1.2f) {
+				//limit to how high you can jump
+				//dont go off my screen
+				if (y > 1.4f) {
 					yVel = -0.1f; //no higher than this
 				}
 
 				y += yVel * elapsed;
+				//cause technically player not moving in x
+				//just check y collision with ground
+				//and also check enemies
 				collideWithGroundY();
 				
 				//THIS WORKS, COMMENTED OUT FOR NOW TO ADD TO GAME PLAY
@@ -287,9 +312,12 @@ public:
 					collideWithEntity(e);
 				}
 			}
-			//enemies
+			//curr entity = enemies
 			else {
 				//fly enemies
+				//Has elements of AI
+				//It tracks the players y position 
+				//slowly moves towards player's y 
 				if (type == "fly") {
 					if (animationElapsed > 1.0f / framesPerSecond) {
 						float Swidth = get<2>(enemiesAnimData[flyIndex]);
@@ -305,9 +333,6 @@ public:
 					//just at a really slow rate
 					float offsetToPlayer = y - ludioY;
 					y -= offsetToPlayer * 0.1 * elapsed;
-					stringstream flyMan;
-					flyMan << "y: " << y << " offsetToPlayer " <<offsetToPlayer<<" ludioy " << ludioY <<endl;
-					//OutputDebugString(flyMan.str().c_str());
 				}
 				//glop anim
 				if (type == "glop") {
@@ -372,6 +397,7 @@ public:
 			if (this->y - height / 3 < enem.y + enem.height / 3 && this->y + height / 3 > enem.y - height / 3) {
 				
 				win = false; 
+				Mix_PlayChannel(-1, gameOverSound, 0);
 				state = GAME_OVER_DRAW_ONLY;
 			//	return true;
 			}
@@ -531,6 +557,7 @@ void setUp(vector<Entity>& platform, const GLuint platSheet, Entity& player, con
 }
 
 //render the new enemies
+//randomly procedurally generated
 void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup) {
 	stringstream ss;
 	int spawnPick = rand() % 30; //range: 0 to 29
@@ -555,8 +582,6 @@ void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup)
 			enemiesShow.back().x += (enemiesShow.back().width * 2);
 		}
 	}
-	
-	//OutputDebugString(ss.str().c_str());
 }
 
 //PURGE
@@ -569,6 +594,7 @@ void purge() {
 }
 
 //draw the moving background
+//using GL_Repeat allowed for me to wrap around with my uv coords
 void drawBG(ShaderProgram* program, GLuint img, Matrix modelMatrix, float offSet) {
 	glBindTexture(GL_TEXTURE_2D, img);
 	float vertices[] = /*{ -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };*/{ -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1 };//{ -0.125, -0.5, 0.125, -0.5, 0.125, 0.5, -0.125, -0.5, 0.125, 0.5, -0.125, 0.5 };
@@ -612,8 +638,8 @@ void drawJumpIcon(ShaderProgram* program, GLuint img, Matrix modelMatrix) {
 	glDisableVertexAttribArray(program->texCoordAttribute);
 }
 
-
 //update moving alive entities
+//entity update
 void updateAll(float elapsed, Entity& ludio) {
 	//update
 	ludio.update(elapsed);
@@ -623,10 +649,11 @@ void updateAll(float elapsed, Entity& ludio) {
 	}
 }
 
-
 //this time for real
 //took main update stuff and dropped it here
+//update for basically everything else needs time
 void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow, Entity& ludio, float& recoverJump) {
+	//score
 	scoreElapsed += elapsed;
 	if (scoreElapsed > 1.0f / 10.0f) {
 		score++;
@@ -653,21 +680,21 @@ void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow,
 	//can I recover my jump now??
 	recoverJump += elapsed;
 	if (recoverJump > 5.0f) {
-		if (jumps_left < 6) {
+		if (jumps_left < 5) {
 			jumps_left++;
 		}
 		recoverJump = 0.0f;
 	}
 
-	//update
+	//update my entities
 	updateAll(elapsed, ludio);
 }
 
 //draw everything
-void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint background, GLuint font, ShaderProgram* program, Entity& ludio, GLuint jumpIcon) {
+void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint background, GLuint font, ShaderProgram* program, Entity& ludio, GLuint jumpIcon, float& timeToShow) {
 	//draw
 	//background first
-	bgOffSet += 1.0f / 32.0f * elapsed;
+	bgOffSet += (1.0f / 16.0f) * elapsed;
 	modelMatrix.identity();
 	modelMatrix.Scale(3.75f, 2.0f, 1.0f);
 	drawBG(program, background, modelMatrix, bgOffSet);
@@ -693,7 +720,7 @@ void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint backgro
 	modelMatrix.Translate(-3.0f, -1.5f, 0.0f);
 	program->setModelMatrix(modelMatrix);
 	stringstream num_of_jumps;
-	num_of_jumps << "Jumps Remaining";
+	num_of_jumps << "Jumps Left";
 	DrawText(program, font, num_of_jumps.str(), 0.350f, -.15f);
 	float xJumpIconOffset = -2.5f;
 	for (int i = 0; i < jumps_left; i++) {
@@ -703,6 +730,20 @@ void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint backgro
 		program->setModelMatrix(modelMatrix);
 		//thanks for the jump icon Henry Zhou
 		drawJumpIcon(program, jumpIcon, modelMatrix);
+	}
+	if (drawHighScore && timeToShow < 2.0f) {
+		//draw you got highscore for like 3 secs or so
+		//score 
+		modelMatrix.identity();
+		modelMatrix.Translate(-2.550f, 1.00f, 0.0f);
+		program->setModelMatrix(modelMatrix);
+		stringstream youGotHighScore;
+		youGotHighScore << "NEW HIGHSCORE!";
+		DrawText(program, font, youGotHighScore.str(), 0.50f, -0.10f);
+	}
+	else {
+		drawHighScore = false; 
+		timeToShow = 0.0f;
 	}
 
 }
@@ -782,6 +823,10 @@ int main(int argc, char *argv[])
 
 		state = TITLE_SCREEN;
 		win = false;
+		//high score
+		float highscore = 0;
+		bool newHighScore = false;
+		 
 
 		glViewport(0, 0, 640, 360);
 		glEnable(GL_BLEND);	
@@ -799,6 +844,23 @@ int main(int argc, char *argv[])
 		float recoverJump = 0.0f;
 		float bgOffSet = 0.0f;
 
+		//player cant hold space to fly
+		//they have to break the keyboard and spam it 
+		bool letThereBeFlight = true;
+
+		float highScoreTime = 0.0;
+
+		//music + sound effects
+		Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+
+		jumpSound = Mix_LoadWAV("jumpSound.wav");
+		floatSound = Mix_LoadWAV("floatSound.wav");
+		gameOverSound = Mix_LoadWAV("gameOver.wav");
+		highScoreSound = Mix_LoadWAV("highScoreSound.wav");
+		//All credit goes to Manaka Kataoka, Yasuaki Iwata, and Hajime Wakai for creating this wonderful soundtrack.
+		musicMusic = Mix_LoadMUS("musicMusic.mp3");
+
+		Mix_PlayMusic(musicMusic, -1);
 
 	SDL_Event event;
 	bool done = false;
@@ -808,7 +870,7 @@ int main(int argc, char *argv[])
 		lastTick = ticks;
 
 		float fixedElapsed = elapsed;
-
+		
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
 				done = true;
@@ -822,14 +884,25 @@ int main(int argc, char *argv[])
 					if (state == GAME_STATE) {
 						//spam
 						//MORE TESTING NEEDS TO BE DONE WITH THE VALUE
-						ludio.yVel += -0.145*ludio.gravity;
+						if (letThereBeFlight) {
+							Mix_PlayChannel(-1, floatSound, 0);
+							ludio.yVel += -0.145*ludio.gravity;
+							letThereBeFlight = false;
+						}
 					}
 				}
 				//restart 
 				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == GAME_OVER_DRAW_ONLY) {
 					state = TITLE_SCREEN;
 					//reset everything
+					float lastTick = 0.0f;
+					float scoreElapsed = 0.0f;
+					float renderEnemyNow = 0.0f;
+					float recoverJump = 0.0f;
+					float bgOffSet = 0.0f;
 					jumps_left = 5;
+					newHighScore = false;
+					drawHighScore = false;
 					reset(ludio, ludioSheet);
 				}
 				//pause
@@ -843,6 +916,12 @@ int main(int argc, char *argv[])
 				//oaused - resume
 				if (event.key.keysym.scancode == SDL_SCANCODE_R && state == PAUSE) {
 					state = GAME_STATE;
+				}
+			}
+			else if (event.type == SDL_KEYUP) {
+				//you have to spam to float
+				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE) {
+					letThereBeFlight = true;
 				}
 			}
 		}
@@ -887,11 +966,29 @@ int main(int argc, char *argv[])
 			modelMatrix.Translate(-2.50f, -0.5f, 0.0f);
 			program.setModelMatrix(modelMatrix);
 			DrawText(&program, font, "Press Space to Play", 0.25f, -0.10f);
+			//Current HighScore
+			modelMatrix.identity();
+			modelMatrix.Translate(-3.0f, -1.750f, 0.0f);
+			program.setModelMatrix(modelMatrix);
+			stringstream theCurrentHighScore;
+			theCurrentHighScore << "High Score: " << highscore;
+			DrawText(&program, font, theCurrentHighScore.str(), 0.350f, 0.0f);
 		}break;
 
 			//play
 		case GAME_STATE:
 		{
+			//play highscore music one time
+			//for every game
+			if (score > highscore && newHighScore == false && score > 100) {
+				newHighScore = true;
+				Mix_PlayChannel(-1, highScoreSound, 0);
+				//tell player he got the high score
+				//so draw it for like 3 secs
+				drawHighScore = true;
+			}
+			highscore = score > highscore ? score : highscore;
+			
 			//fixed updating
 			if (fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
 				fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
@@ -901,8 +998,9 @@ int main(int argc, char *argv[])
 				updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio, recoverJump);
 			}
 			updateAllForReal(fixedElapsed, scoreElapsed, renderEnemyNow, ludio, recoverJump);
+			if (drawHighScore) highScoreTime += fixedElapsed;
 			//draw
-			drawAll(bgOffSet, modelMatrix, fixedElapsed, background, font, &program, ludio, jumpIcon);
+			drawAll(bgOffSet, modelMatrix, fixedElapsed, background, font, &program, ludio, jumpIcon, highScoreTime);
 
 			//PURGE...
 			if (enemiesToFight.size() != 0) {
@@ -989,7 +1087,10 @@ int main(int argc, char *argv[])
 		SDL_GL_SwapWindow(displayWindow);
 	}
 
-
+	Mix_FreeChunk(jumpSound);
+	Mix_FreeChunk(gameOverSound);
+	Mix_FreeChunk(floatSound);
+	Mix_FreeMusic(musicMusic);
 	SDL_Quit();
 	return 0;
 }
