@@ -36,6 +36,18 @@ SDL_Window* displayWindow;
 #define FIXED_TIMESTEP 0.01666666f
 #define MAX_TIMESTEPS 6
 
+class Vector2 {
+public:
+	float x;
+	float y;
+	Vector2() { x = 0.0f; y = 0.0f; }
+	Vector2(float x1, float y1) : x(x1), y(y1) {}
+
+	float dist(Vector2 otherDude) {
+		return sqrt((x - otherDude.x)*(x - otherDude.x) + (y - otherDude.y)*(y - otherDude.y));
+	}
+};
+
 class Entity;
 
 //is player playing still
@@ -46,7 +58,8 @@ bool drawHighScore = false;
 
 //for player
 GLuint ludioSheet;
-float ludioY = 0;
+Vector2 ludionPosVec;
+
 //player animations
 int ludioIndex = 0;
 float ludioSize = 1.0f;
@@ -75,7 +88,12 @@ Mix_Chunk *jumpSound;
 Mix_Chunk *floatSound;
 Mix_Chunk *gameOverSound;
 Mix_Chunk *highScoreSound;
+Mix_Chunk *makeHarder;
 Mix_Music *musicMusic;
+
+bool globHarder = true;
+bool flyHarder = true;
+bool snailHarder = true;
 
 GLuint LoadTexture(const char *filePath) {
 	int w, h, comp;
@@ -223,13 +241,13 @@ public:
 	Entity() {}
 
 	Entity(float x, float y, float width, float height, string type, float xVel, float yVel, bool alive) {
-		this->x = x;
-		this->y = y;
+		this->pos.x = x;
+		this->pos.y = y;
 		this->width = width;
 		this->height = height;
 		this->type = type;
-		this->yVel = yVel;
-		this->xVel = xVel;
+		this->veclocityVec.y = yVel;
+		this->veclocityVec.x = xVel;
 		this->alive = alive;
 		aspect = this->width / this->height;
 		//for animation
@@ -251,7 +269,7 @@ public:
 					//when jumps_left != 0
 					if ((keys[SDL_SCANCODE_UP] || keys[SDL_SCANCODE_W]) && (jumps_left != 0)) {
 						if (collidedBottom == true) {
-							yVel = 4.0f;
+							veclocityVec.y = 4.0f;
 							//limited # of jumps
 							if (jumps_left > 0) {
 								Mix_PlayChannel(-1, jumpSound, 0);
@@ -284,23 +302,23 @@ public:
 						93.0f / 512.0f, Swidth, Sheight, ludioSize, (Swidth*aspect), (Sheight*aspect));
 					//slowly drop the player velocity cause air friction....and gravity too
 					//adding this in makes spamming even harder....
-					yVel = lerp(yVel, 0.0f, elapsed*friction_y);					
+					//veclocityVec.y = lerp(veclocityVec.y, 0.0f, elapsed*frictionVec.y);
 				}
 				//while I am in the air 
 				//you can insta teleport back
 				if (keys[SDL_SCANCODE_DOWN] || keys[SDL_SCANCODE_S]) {
-					y = -0.99f;
+					pos.y = -0.99f;
 					jump = false;
 				}
 				
-				yVel += elapsed * gravity;
+				veclocityVec.y += elapsed * gravity;
 				//limit to how high you can jump
 				//dont go off my screen
-				if (y > 1.4f) {
-					yVel = -0.1f; //no higher than this
+				if (pos.y > 1.4f) {
+					veclocityVec.y = -0.1f; //no higher than this
 				}
 
-				y += yVel * elapsed;
+				pos.y += veclocityVec.y * elapsed;
 				//cause technically player not moving in x
 				//just check y collision with ground
 				//and also check enemies
@@ -331,8 +349,8 @@ public:
 					}
 					//fly move towards ludio's y position
 					//just at a really slow rate
-					float offsetToPlayer = y - ludioY;
-					y -= offsetToPlayer * 0.1 * elapsed;
+					float offsetToPlayer = pos.y - ludionPosVec.y;
+					pos.y -= offsetToPlayer * 0.1 * elapsed;
 				}
 				//glop anim
 				if (type == "glop") {
@@ -348,8 +366,8 @@ public:
 					}
 					
 					//fall down to ground
-					yVel += gravity * elapsed;
-					y += yVel *elapsed;
+					veclocityVec.y += gravity * elapsed;
+					pos.y += veclocityVec.y *elapsed;
 					collideWithGroundY();
 				}
 				if (type == "snail") {
@@ -363,16 +381,38 @@ public:
 						snailIndex = ((snailIndex + 1) % 2) + 4;
 						animationElapsed = 0.0f;
 					}
-					yVel += gravity * elapsed;
-					y += yVel *elapsed;
+					veclocityVec.y += gravity * elapsed;
+					pos.y += veclocityVec.y *elapsed;
 					collideWithGroundY();
+					//be smart my ai snail
+					//find vec 2 dist to player
+					//if below a certain value and you to right 
+					//then slow down and mke game harder by throwing off timings
+					//activate only score > ###
+					if (score > 300 && pos.x > ludionPosVec.x && !slowDownOnce) {
+						float linDist = pos.dist(ludionPosVec);
+						if (linDist < 0.90f) {
+							oldVelVec = veclocityVec;
+							veclocityVec.x = veclocityVec.x * 0.75;
+							slowDownOnce = true;
+						}
+						
+					}
+					//swap back once
+					else if (slowDownOnce && pos.x < ludionPosVec.x){
+						slowDownOnce = true;
+						veclocityVec = oldVelVec;
+					}
+					
+					
 				}
-				if (xVel <= 5.0f) {
-					xVel += acceleration_x * elapsed;
+				//progressively get faster from their based/modified stats
+				if (veclocityVec.x <= 5.0f) {
+					veclocityVec.x += accelerationVec.x * elapsed;
 				}
 				//move in x
 				//for all enemies
-				x -= xVel * elapsed;
+				pos.x -= veclocityVec.x * elapsed;
 				//they have done their job and failed
 				offScreen();
 			}
@@ -382,7 +422,7 @@ public:
 	//entity now off screen
 	//it served it purpose
 	void offScreen() {
-		if (this->x + width / 2 < -3.60f) {
+		if (this->pos.x + width / 2 < -3.60f) {
 			alive = false;
 		}
 	}
@@ -392,9 +432,9 @@ public:
 	void collideWithEntity(Entity& enem) {
 		//I collided with something to my right
 		//but it is did not fully pass me 
-		if (this->x + width / 3 > enem.x - enem.width / 3 &&
-			this->x < enem.x) {
-			if (this->y - height / 3 < enem.y + enem.height / 3 && this->y + height / 3 > enem.y - height / 3) {
+		if (this->pos.x + width / 3 > enem.pos.x - enem.width / 3 &&
+			this->pos.x < enem.pos.x) {
+			if (this->pos.y - height / 3 < enem.pos.y + enem.height / 3 && this->pos.y + height / 3 > enem.pos.y - height / 3) {
 				
 				win = false; 
 				Mix_PlayChannel(-1, gameOverSound, 0);
@@ -408,12 +448,12 @@ public:
 	void collideWithGroundY() {
 		//check with only 1st row 
 		//1st row all same so check any of the 15 y
-			if (this->y-height/2 < platform[0].y+platform[0].height/2-0.25) {
+			if (this->pos.y-height/2 < platform[0].pos.y+platform[0].height/2-0.25) {
 				collidedBottom = true;
-				yVel = 0.0f;
-				acceleration_y = 0.0f;
-				pen_y = (platform[0].height/2 + platform[0].y-0.25) - (y-height/2);
-				y += pen_y + 0.002;
+				veclocityVec.y = 0.0f;
+				accelerationVec.y = 0.0f;
+				pen_y = (platform[0].height/2 + platform[0].pos.y-0.25) - (pos.y-height/2);
+				pos.y += pen_y + 0.002;
 				jump = false;
 			}
 
@@ -427,25 +467,24 @@ public:
 	void draw(ShaderProgram *program) {
 		if (alive) {
 			modelMatrix.identity();
-			modelMatrix.Translate(x, y, 0);
+			modelMatrix.Translate(pos.x, pos.y, 0);
 			program->setModelMatrix(modelMatrix);
 			sprite.Draw(program);
 		}
 	}
 
 	string type;
-	float xVel;
-	float yVel = 0.0f;
+	Vector2 veclocityVec = Vector2(0.0f, 0.0f);
+	Vector2 oldVelVec = veclocityVec;
+	/*float xVel;
+	float yVel = 0.0f;*/
 
-	float x;
-	float y;
+	Vector2 pos = Vector2(0,0);
 
-	float acceleration_y = 0.0f;
+	Vector2 accelerationVec = Vector2(0, 0);
 	float gravity = -2.5f;
-	float acceleration_x = 0.0f;
-	
-	float friction_y = 0.5f;
-	float friction_x = 0.5f;
+
+	Vector2 frictionVec = Vector2(0.5f, 0.5f);
 
 	float width;
 	float height;
@@ -471,11 +510,13 @@ public:
 	float animationElapsed;
 	float framesPerSecond;
 	
+	//one time slow down snail
+	bool slowDownOnce = false;
 
 	void entityToString() {
 		ostringstream ss;
-		ss << this->type << " stats: centerX " << x << " centerY " << y << " width " << width << " height " << height
-			<< " speedX " << xVel << " speedY" << yVel;
+		ss << this->type << " stats: centerX " << pos.x << " centerY " << pos.y << " width " << width << " height " << height
+			<< " speedX " << veclocityVec.x << " speedY" << veclocityVec.y;
 		//OutputDebugString(ss.str().c_str());
 	}
 }; //end entity
@@ -565,21 +606,30 @@ void renderEnemy(vector<Entity>& list, vector<Entity>& enemiesShow, bool holdup)
 		enemiesShow.push_back(list[2]);
 		ss << "snail ";
 		if (holdup) {
-			enemiesShow.back().x += (enemiesShow.back().width * 2);
+			enemiesShow.back().pos.x += (enemiesShow.back().width * 2);
 		}
 	}
 	else if (spawnPick < 20 && score > 400) { //glop
 		enemiesShow.push_back(list[1]);
 		ss << "glop ";
+		if (globHarder) {
+			Mix_PlayChannel(-1, makeHarder, 0);
+			globHarder = false;
+		}
 		if (holdup) {
-			enemiesShow.back().x += (enemiesShow.back().width * 2);
+			enemiesShow.back().pos.x += (enemiesShow.back().width * 2);
+			
 		}
 	}
-	else if (spawnPick < 30 && score > 100) { //fly
+	else if (spawnPick < 30 && score > 150) { //fly
 		enemiesShow.push_back(list[0]);
 		ss << "fly ";
+		if (flyHarder) {
+			Mix_PlayChannel(-1, makeHarder, 0);
+			flyHarder = false;
+		}
 		if (holdup) {
-			enemiesShow.back().x += (enemiesShow.back().width * 2);
+			enemiesShow.back().pos.x += (enemiesShow.back().width * 2);
 		}
 	}
 }
@@ -643,7 +693,10 @@ void drawJumpIcon(ShaderProgram* program, GLuint img, Matrix modelMatrix) {
 void updateAll(float elapsed, Entity& ludio) {
 	//update
 	ludio.update(elapsed);
-	ludioY = ludio.y;
+	//get ludio's new position
+	ludionPosVec = ludio.pos;
+	/*ludioY = ludio.pos.y;
+	ludioX = ludio.pos.x;*/
 	for (Entity& e1 : enemiesToFight) {
 		e1.update(elapsed);
 	}
@@ -658,6 +711,10 @@ void updateAllForReal(float elapsed, float& scoreElapsed, float& renderEnemyNow,
 	if (scoreElapsed > 1.0f / 10.0f) {
 		score++;
 		scoreElapsed = 0.0f;
+		if (score > 300 && snailHarder) {
+			Mix_PlayChannel(-1, makeHarder, 0);
+			snailHarder = false;
+		}
 	}
 
 	//procedurally generated enemies
@@ -699,10 +756,11 @@ void drawAll(float& bgOffSet, Matrix& modelMatrix, float elapsed, GLuint backgro
 	modelMatrix.Scale(3.75f, 2.0f, 1.0f);
 	drawBG(program, background, modelMatrix, bgOffSet);
 	//entities
-	//ludio is drawn
+	//platofrms drawn
 	for (Entity& pl : platform) {
 		pl.draw(program);
 	}
+	//ludio is drawn
 	ludio.draw(program);
 	//render the enemies
 	for (Entity& e1 : enemiesToFight) {
@@ -853,12 +911,16 @@ int main(int argc, char *argv[])
 		//music + sound effects
 		Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
 
+		//https://www.freesound.org/people/Cabeeno%20Rossley/
 		jumpSound = Mix_LoadWAV("jumpSound.wav");
 		floatSound = Mix_LoadWAV("floatSound.wav");
 		gameOverSound = Mix_LoadWAV("gameOver.wav");
+		//https://www.freesound.org/people/psychentist/sounds/168568/
 		highScoreSound = Mix_LoadWAV("highScoreSound.wav");
+		makeHarder = Mix_LoadWAV("harder.wav");
 		//All credit goes to Manaka Kataoka, Yasuaki Iwata, and Hajime Wakai for creating this wonderful soundtrack.
 		musicMusic = Mix_LoadMUS("musicMusic.mp3");
+		
 
 		Mix_PlayMusic(musicMusic, -1);
 
@@ -886,7 +948,7 @@ int main(int argc, char *argv[])
 						//MORE TESTING NEEDS TO BE DONE WITH THE VALUE
 						if (letThereBeFlight) {
 							Mix_PlayChannel(-1, floatSound, 0);
-							ludio.yVel += -0.145*ludio.gravity;
+							ludio.veclocityVec.y += -0.1495*ludio.gravity;
 							letThereBeFlight = false;
 						}
 					}
@@ -903,6 +965,9 @@ int main(int argc, char *argv[])
 					jumps_left = 5;
 					newHighScore = false;
 					drawHighScore = false;
+					globHarder = true;
+					flyHarder = true;
+					snailHarder = true;
 					reset(ludio, ludioSheet);
 				}
 				//pause
