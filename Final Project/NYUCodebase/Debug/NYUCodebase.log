@@ -1,4 +1,4 @@
-﻿Build started 5/13/2017 4:57:58 AM.
+﻿Build started 5/13/2017 5:06:00 PM.
      1>Project "C:\Users\mugra_000\Documents\NYU College\Somphmore Semester 2\Intro to Game Programming\GameProgramming\Final Project\NYUCodebase\NYUCodebase.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /IC:\SDL2\include /IC:\SDL2_image\include /IC:\glew\include /IC:\SDL2_mixer\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _WINDOWS /D _MBCS /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
@@ -20,8 +20,8 @@
      1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(672): warning C4305: 'initializing' : truncation from 'double' to 'float'
      1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(820): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
      1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(896): warning C4305: 'argument' : truncation from 'double' to 'float'
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(949): warning C4244: '+=' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(1021): warning C4305: 'argument' : truncation from 'double' to 'float'
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(951): warning C4244: '+=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\mugra_000\documents\nyu college\somphmore semester 2\intro to game programming\gameprogramming\final project\nyucodebase\main.cpp(1023): warning C4305: 'argument' : truncation from 'double' to 'float'
      1>c:\program files (x86)\microsoft visual studio 12.0\vc\include\tuple(80): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
                  c:\program files (x86)\microsoft visual studio 12.0\vc\include\tuple(233) : see reference to function template instantiation 'std::_Tuple_val<_This>::_Tuple_val<_Ty>(_Other &&)' being compiled
                  with
@@ -56,4 +56,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.41
+Time Elapsed 00:00:02.93

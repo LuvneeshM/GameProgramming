@@ -829,7 +829,7 @@ void reset(Entity& ludio, GLuint playerSheet) {
 int main(int argc, char *argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
-	displayWindow = SDL_CreateWindow("Let's Go For A Walk", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 360, SDL_WINDOW_OPENGL);
+	displayWindow = SDL_CreateWindow("Let's Go For A Walk", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
 	SDL_GLContext context = SDL_GL_CreateContext(displayWindow);
 	SDL_GL_MakeCurrent(displayWindow, context);
 	#ifdef _WINDOWS
@@ -886,7 +886,7 @@ int main(int argc, char *argv[])
 		bool newHighScore = false;
 		 
 
-		glViewport(0, 0, 640, 360);
+		glViewport(0, 0, 1280, 720);
 		glEnable(GL_BLEND);	
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		ShaderProgram program(RESOURCE_FOLDER"vertex_textured.glsl", RESOURCE_FOLDER"fragment_textured.glsl");
@@ -939,7 +939,7 @@ int main(int argc, char *argv[])
 			}
 			else if (event.type == SDL_KEYDOWN) {
 				if (event.key.keysym.scancode == SDL_SCANCODE_SPACE) {
-					//player starts game
+					//player starts gameMix_PlayChannel
 					if (state == TITLE_SCREEN) {
 						state = GAME_STATE;						
 					}
@@ -947,7 +947,7 @@ int main(int argc, char *argv[])
 						//spam
 						//MORE TESTING NEEDS TO BE DONE WITH THE VALUE
 						if (letThereBeFlight) {
-							Mix_PlayChannel(-1, floatSound, 0);
+							//Mix_PlayChannel(-1, floatSound, 0);
 							ludio.veclocityVec.y += -0.1495*ludio.gravity;
 							letThereBeFlight = false;
 						}
@@ -1020,7 +1020,7 @@ int main(int argc, char *argv[])
 			modelMatrix.identity();
 			modelMatrix.Translate(-2.750f, 0.25f, 0.0f);
 			program.setModelMatrix(modelMatrix);
-			DrawText(&program, font, "Space to float", 0.25f, -0.10);
+			DrawText(&program, font, "Spam! Space to float", 0.25f, -0.10);
 			//pause
 			modelMatrix.identity();
 			modelMatrix.Translate(-2.750f, 0.0f, 0.0f);
